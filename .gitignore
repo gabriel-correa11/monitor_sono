@@ -1,0 +1,39 @@
+# RNF01/RNF02: dados locais nunca vão para o repositório
+dados/
+
+# Vídeo
+*.mp4
+*.avi
+*.mkv
+*.h264
+
+# Áudio
+*.wav
+*.mp3
+
+# Banco
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# IDEs
+.idea/
+.vscode/
+
+# Variáveis de ambiente e segredos
+.env
+.streamlit/secrets.toml
+
+# Claude Code
+CLAUDE.md
+.claude/
