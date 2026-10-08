@@ -182,17 +182,5 @@ Filmar uma pessoa dormindo e gerar informação sobre a saúde dela envolve **da
 
 O descarte do vídeo bruto e o prazo de guarda ainda estão em aberto (RNF03, RNF04).
 
-## 8. Pendências que dependem da equipe
-
-Estas decisões não cabem aos analistas sozinhos. Até serem tomadas, o código não as implementa.
-
-| Pendência | Requisito | Quem decide | Quando |
-|---|---|---|---|
-| Quais eventos sonoros entram (ronco? ruído?) | RF06 | Analistas, pesquisadores e gestão | 22/10 |
-| Sessão ao vivo ou importação de gravação já feita | RF01, RF02 | Analistas e gestão | Antes de 15/10 |
-| O que conta como movimento (limiar e duração mínima) | RF05 | Analistas, com a gravação real | 22/10 |
-| Descarte do vídeo bruto e prazo de guarda | RNF03, RNF04 | Pesquisadores e gestão | A definir |
-| Controle de acesso e criptografia | RNF01, RNF02 | Analistas e gestão | A definir |
-| Equipamento de captura definitivo | RF03, RF04 | Analistas e pesquisadores | A confirmar |
 
 
