@@ -1,1 +1,1 @@
-"""Entrada de dados: imagens (RF03) e áudio (RF04)."""
+"""Entrada de dados: imagens da câmera (RF02)."""

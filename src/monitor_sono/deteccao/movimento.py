@@ -1,19 +1,17 @@
-"""RF05 — Identificar movimentos durante a sessão."""
-
-from collections.abc import Iterator
-from dataclasses import dataclass
+"""RF07 — Detectar movimentos corporais e mudanças de posição."""
 
 import numpy as np
 
 
-@dataclass
-class Movimento:
-    inicio_s: float
-    fim_s: float
-    intensidade: float
+def detectar_movimento_corporal(
+    quadro_anterior: np.ndarray, quadro_atual: np.ndarray
+) -> bool:
+    """RF07. Retorna True se houve movimento corporal entre os quadros."""
+    raise NotImplementedError("RF07: a implementar")
 
 
-def detectar_movimentos(
-    quadros: Iterator[tuple[float, np.ndarray]],
-) -> list[Movimento]:
-    raise NotImplementedError("RF05: implementar até 22/10")
+def detectar_mudanca_posicao(
+    quadro_anterior: np.ndarray, quadro_atual: np.ndarray
+) -> bool:
+    """RF07. Retorna True se houve mudança de posição entre os quadros."""
+    raise NotImplementedError("RF07: a implementar")

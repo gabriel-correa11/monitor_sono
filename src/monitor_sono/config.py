@@ -1,17 +1,27 @@
-"""Configurações gerais do sistema. RF: todos. RNF05."""
+"""Configurações gerais do sistema."""
 
 from pathlib import Path
 
 RAIZ: Path = Path(__file__).resolve().parent.parent.parent
 PASTA_DADOS: Path = RAIZ / "dados"
-PASTA_GRAVACOES: Path = PASTA_DADOS / "gravacoes"
 CAMINHO_BANCO: Path = PASTA_DADOS / "monitor_sono.db"
 
 QUADROS_POR_SEGUNDO_ANALISE: int = 1
 RESOLUCAO_ANALISE: tuple[int, int] = (320, 240)
 
-TIPOS_EVENTO: frozenset[str] = frozenset({"movimento", "som"})  # RF05, RF06
+# Seção 4 da lista de requisitos: comportamentos identificáveis (RF09)
+COMPORTAMENTOS: frozenset[str] = frozenset({
+    "olhos_abertos",                # RF05
+    "olhos_fechados",               # RF05
+    "movimento_cabeca",             # RF06
+    "movimento_corporal",           # RF07
+    "mudanca_posicao",              # RF07
+    "ausencia_movimento",           # RF11
+    "visibilidade_insuficiente",    # RF15
+})
 
+# RNF12
 AVISO_NAO_DIAGNOSTICO: str = (
-    "Estes resultados são dados de monitoramento e não representam diagnóstico médico."
-)  # RNF07
+    "Os resultados deste sistema representam estimativas comportamentais "
+    "e não constituem diagnósticos clínicos."
+)

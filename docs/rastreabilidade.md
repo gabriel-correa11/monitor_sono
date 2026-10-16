@@ -1,23 +1,19 @@
 # Matriz de Rastreabilidade de Requisitos
 
-**Projeto:** Sistema de Monitoramento do Sono por Câmera, Áudio e Inteligência Artificial
+**Projeto:** Sistema de Monitoramento do Sono por Câmera e Inteligência Artificial
 **Disciplina:** Tópicos Especiais em Engenharia de Software
-**Versão:** 1.0 (estrutura inicial do software)
+**Versão:** 2.0 (alinhamento à nova lista de requisitos — estudo de caso)
 
 ## Para que serve este documento
 
-A matriz liga cada requisito ao ponto do código que o atende, à entrega em que ele deve ficar pronto e
-à sua situação atual. Ela tem três usos:
+A matriz liga cada requisito ao ponto do código que o atende e à sua situação atual. Ela tem três usos:
 
 1. **Durante o desenvolvimento**: mostra o que falta e evita código sem requisito (regra da equipe).
-2. **Para a documentação**: é a fonte para a documentação técnica (22/10) e para o documento de
-   requisitos finalizado (05/11).
-3. **No fim do projeto**: é a base da conferência de requisitos atendidos (19/11), que aparece na
-   apresentação.
+2. **Para a documentação**: é a fonte para a documentação técnica e para o documento de requisitos finalizado.
+3. **No fim do projeto**: é a base da conferência de requisitos atendidos, que aparece na apresentação.
 
-**Base:** lista de requisitos da *Pesquisa de Viabilidade* (RF01 a RF11, RNF01 a RNF08). A *Pesquisa
-Bibliográfica* tem uma lista anterior com numeração diferente (RF01 a RF09). Ela serve como
-fundamentação, mas **os IDs válidos são os desta matriz**.
+**Base:** lista de requisitos da *Pesquisa de Viabilidade* (RF01 a RF15, RNF01 a RNF12, RN01 a RN10),
+transcrita em `docs/requisitos.md`.
 
 **Atualização:** a cada entrega, quem mexeu no código atualiza a coluna Situação e registra a mudança no
 histórico, no fim do documento.
@@ -36,80 +32,100 @@ Caminhos relativos a `src/monitor_sono/`.
 
 ## Requisitos funcionais
 
-| ID | Requisito | Arquivo | Função / elemento | Entrega | Situação | Teste |
-|---|---|---|---|---|---|---|
-| RF01 | Permitir iniciar uma sessão de monitoramento | `sessao/__init__.py` | `iniciar_sessao()` | 08/10 | Estrutura pronta | Indireto, via `banco.criar_sessao` |
-| RF02 | Permitir encerrar uma sessão de monitoramento | `sessao/__init__.py` | `encerrar_sessao()` | 08/10 | Estrutura pronta | Indireto, via `banco.finalizar_sessao` |
-| RF03 | Receber imagens da câmera durante a sessão | `captura/video.py` | `ler_quadros()` | 15/10 | Assinatura definida | — |
-| RF04 | Receber áudio durante o monitoramento, quando disponível | `captura/audio.py` | `ler_audio()` | 15/10 | Assinatura definida | — |
-| RF05 | Identificar movimentos durante a sessão | `deteccao/movimento.py` | `detectar_movimentos()` | 22/10 | Assinatura definida | — |
-| RF06 | Identificar eventos sonoros definidos no escopo | `deteccao/som.py` | `detectar_eventos_sonoros()` | após 22/10 | Aguardando decisão | — |
-| RF07 | Registrar eventos com data e horário | `registro/banco.py` | `registrar_evento()`, tabela `eventos` | 08/10 | Implementado | `test_sessao_e_evento`, `test_rejeita_tipo_fora_dos_requisitos` |
-| RF08 | Apresentar uma linha do tempo dos eventos | `dashboard/app.py` | seção "Linha do tempo" | 15/10 | Assinatura definida | — |
-| RF09 | Apresentar um resumo dos resultados da sessão | `dashboard/app.py` | seção "Resumo da sessão" | 15/10 | Assinatura definida | — |
-| RF10 | Permitir consultar sessões anteriores | `registro/banco.py`, `dashboard/app.py`, `__main__.py` | `listar_sessoes()`, `eventos_da_sessao()`, comando `sessoes` | 08/10 (dados), 15/10 (tela) | Estrutura pronta | `test_sessao_e_evento` |
-| RF11 | Permitir visualizar ou gerar relatório dos resultados | `dashboard/app.py` | seção "Relatório" | 29/10 | Assinatura definida | — |
+| ID | Requisito | Arquivo | Função / elemento | Situação | Teste |
+|---|---|---|---|---|---|
+| RF01 | Iniciar e encerrar sessão de monitoramento | `sessao/__init__.py` | `iniciar_sessao()`, `encerrar_sessao()` | Estrutura pronta | Indireto, via `banco.criar_sessao` |
+| RF02 | Capturar imagens em tempo real pela câmera | `captura/video.py` | `capturar_quadros()` | Assinatura definida | — |
+| RF03 | Identificar presença de pessoa na área monitorada | `deteccao/presenca.py` | `detectar_presenca()` | Assinatura definida | — |
+| RF04 | Detectar a região facial do indivíduo | `deteccao/rosto.py` | `detectar_rosto()` | Assinatura definida | — |
+| RF05 | Identificar estado dos olhos (abertos, fechados, indeterminado) | `deteccao/olhos.py` | `detectar_estado_olhos()` | Assinatura definida | — |
+| RF06 | Detectar movimentos da cabeça | `deteccao/cabeca.py` | `detectar_movimento_cabeca()` | Assinatura definida | — |
+| RF07 | Identificar movimentos corporais e mudanças de posição | `deteccao/movimento.py` | `detectar_movimento_corporal()`, `detectar_mudanca_posicao()` | Assinatura definida | — |
+| RF08 | Registrar movimentos com horários | `registro/banco.py` | `registrar_comportamento()`, tabela `comportamentos` | Implementado | `test_sessao_e_comportamento` |
+| RF09 | Classificar comportamentos conforme critérios | `classificacao/comportamentos.py` | `classificar_comportamentos()` | Assinatura definida | — |
+| RF10 | Estimar estados de sono a partir de características visuais | `classificacao/estados.py` | `estimar_estado()` | Assinatura definida | — |
+| RF11 | Identificar períodos de movimentação e ausência | `classificacao/periodos.py` | `identificar_periodos()` | Assinatura definida | — |
+| RF12 | Armazenar resultados das classificações | `registro/banco.py` | `registrar_estado()`, tabela `estados` | Implementado | `test_registrar_estado` |
+| RF13 | Apresentar histórico cronológico de comportamentos e estados | `dashboard/app.py` | seções "Resumo", "Comportamentos", "Estados" | Assinatura definida | — |
+| RF14 | Gerar relatório da sessão | `dashboard/app.py` | seções "Sessões anteriores", "Relatório" | Assinatura definida | — |
+| RF15 | Sinalizar visibilidade insuficiente da câmera | `deteccao/visibilidade.py`, `dashboard/app.py` | `verificar_visibilidade()`, seção "Visibilidade" | Assinatura definida | — |
 
 ### Observações
 
-- **RF01 e RF02**: hoje uma sessão é aberta e fechada com data e hora. Ainda falta decidir se a sessão
-  corresponde a uma gravação ao vivo ou à importação de um arquivo já gravado. A estrutura atende os
-  dois casos, porque o campo `origem` aceita tanto câmera quanto arquivo.
-- **RF06**: a função existe só para reservar o lugar no código. Nenhum tipo de som é classificado até a
-  definição de 22/10.
-- **RF07**: o banco **recusa** tipos de evento que não estão nos requisitos. Hoje só aceita `movimento`
-  (RF05) e `som` (RF06). Isso impede, por exemplo, registrar "fase do sono", que está fora do escopo.
+- **RF01**: a sessão é ao vivo (câmera em tempo real). O campo `origem` foi removido porque não há mais
+  importação de gravações.
+- **RF05**: três estados possíveis — abertos, fechados, indeterminado (RN06).
+- **RF08/RF12**: o banco separa comportamentos observados (tabela `comportamentos`) e estados estimados
+  (tabela `estados`) para atender o RNF07.
+- **RF09/RF10/RF11**: dependem de limiares e critérios que a equipe ainda não definiu (RN01–RN05).
+  Assinatura pronta, implementação aguarda.
 
 ## Requisitos não funcionais
 
 | ID | Requisito | Como é atendido hoje | Situação | Falta |
 |---|---|---|---|---|
-| RNF01 | Privacidade: dados acessíveis só a usuários autorizados | `dados/` fora do git; tudo fica no computador local | Estrutura pronta | Controle de acesso (pendência) |
-| RNF02 | Segurança: proteção na transmissão e no armazenamento | Banco SQLite local, sem nuvem, sem transmissão pela rede | Estrutura pronta | Criptografia (pendência) |
-| RNF03 | Minimização: avaliar a necessidade de guardar vídeo/áudio completos | — | Aguardando decisão | Definir se o vídeo bruto é descartado após a análise |
-| RNF04 | Retenção: definir por quanto tempo os dados são mantidos | — | Aguardando decisão | Definir o prazo de guarda |
-| RNF05 | Desempenho: processamento em tempo adequado | `config.py`: 1 quadro por segundo, resolução 320x240 | Estrutura pronta | Medir com a gravação real |
-| RNF06 | Usabilidade: resultados simples e compreensíveis | `dashboard/app.py`: seções separadas por assunto | Estrutura pronta | Testes dos apresentadores (12/11) |
-| RNF07 | Limitação clínica: resultados não são apresentados como diagnóstico | `config.AVISO_NAO_DIAGNOSTICO`, exibido no dashboard e na linha de comando | Implementado | — |
-| RNF08 | Disponibilidade: sistema operacional durante a sessão | — | Não iniciado | Depende da decisão sobre sessão ao vivo ou importação |
+| RNF01 | Utilizar exclusivamente câmera | Módulo `captura/` só tem `video.py`; áudio removido | Estrutura pronta | — |
+| RNF02 | Processamento automático por visão computacional | Módulos `deteccao/` e `classificacao/` | Assinatura definida | Implementar detecções |
+| RNF03 | Funcionar sem interação constante do usuário | — | Não iniciado | Depende do pipeline de monitoramento |
+| RNF04 | Precisão temporal de no mínimo um segundo | `banco.py`: `isoformat(timespec="seconds")` | Implementado | — |
+| RNF05 | Preservar integridade dos registros | Chaves estrangeiras com `PRAGMA foreign_keys = ON` | Implementado | — |
+| RNF06 | Proteção contra acessos não autorizados | `dados/` fora do git; tudo fica no computador local | Estrutura pronta | Controle de acesso (pendência) |
+| RNF07 | Distinguir observações visuais de estados estimados | Tabelas separadas: `comportamentos` e `estados`; dashboard com seções distintas | Estrutura pronta | — |
+| RNF08 | Monitoramento contínuo durante a sessão | `config.py`: 1 qps, 320×240 | Estrutura pronta | Medir com câmera real |
+| RNF09 | Registrar classificações não confiáveis | `banco.py`: coluna `confiavel` na tabela `estados` | Implementado | — |
+| RNF10 | Permitir exclusão de dados da sessão | `banco.py`: `excluir_sessao()` com CASCADE | Implementado | — |
+| RNF11 | Autorização LGPD para tratamento de imagens | — | Não iniciado | Termo de consentimento |
+| RNF12 | Informar que resultados não são diagnóstico | `config.AVISO_NAO_DIAGNOSTICO`, exibido no dashboard e na linha de comando | Implementado | — |
+
+## Regras de negócio
+
+| ID | Regra | Onde se aplica | Situação |
+|---|---|---|---|
+| RN01 | Olhos abertos contínuos → evidência de vigília | `classificacao/estados.py` | Assinatura definida |
+| RN02 | Olhos fechados contínuos + outros comportamentos → possível sono | `classificacao/estados.py` | Assinatura definida |
+| RN03 | Ausência prolongada de movimentos → contribui para possível sono, mas não basta isoladamente | `classificacao/estados.py`, `classificacao/periodos.py` | Assinatura definida |
+| RN04 | Movimentos frequentes → períodos de maior atividade motora | `classificacao/periodos.py` | Assinatura definida |
+| RN05 | Mudanças bruscas de posição → eventos de movimentação corporal | `classificacao/periodos.py` | Assinatura definida |
+| RN06 | Olhos não visíveis → não classificar como fechados | `deteccao/olhos.py` | Assinatura definida |
+| RN07 | Informações visuais insuficientes → estado indeterminado | `deteccao/visibilidade.py`, `classificacao/estados.py` | Assinatura definida |
+| RN08 | Classificações associadas a horário ou intervalo | `registro/banco.py`: colunas `inicio` e `fim` | Implementado |
+| RN09 | Classificações baseadas exclusivamente em informações visuais da câmera | Arquitetura: sem módulo de áudio | Estrutura pronta |
+| RN10 | Não apresentar estimativas como identificação clínica | `config.AVISO_NAO_DIAGNOSTICO`, `dashboard/app.py` | Implementado |
 
 ## Itens fora do escopo
 
-Itens que aparecem em documentos do projeto mas **não serão implementados**, com o motivo. Registrar
-isso evita que alguém cobre essas funções depois.
-
 | Item | Onde aparece | Motivo |
 |---|---|---|
-| Identificação das fases do sono (N1, N2, N3, REM) | Cronograma, descrição do cargo de analista | Não está em nenhum requisito. As fases são definidas por sinais elétricos (EEG, EOG, EMG) que a câmera não mede, e N2, N3 e REM são fisicamente parados. |
-| Diagnóstico de distúrbios do sono | Pesquisa de viabilidade | Fora do escopo do MVP. Exige validação clínica (RNF07). |
+| Identificação das fases do sono (N1, N2, N3, REM) | Cronograma, descrição de cargo | Fases são definidas por sinais elétricos (EEG, EOG, EMG) que a câmera não mede. |
+| Diagnóstico de distúrbios do sono | Pesquisa de viabilidade | Fora do escopo do estudo de caso. Exige validação clínica (RNF12). |
 | Treinamento de IA própria | Pesquisa de viabilidade | Exige dataset, rotulagem e validação incompatíveis com o prazo. |
-| Tempo total de sono, eficiência, latência e despertares estimados | Levantamento de tecnologia | Não estão na lista de requisitos. Só entram se forem aprovados como novos requisitos. |
-| Classificação de postura | Levantamento de tecnologia | Não está na lista. Depende de teste piloto com a pessoa coberta. |
+| Captura e análise de áudio | Lista anterior de requisitos | Removido na nova lista. O sistema usa exclusivamente câmera (RNF01, RN09). |
+| Classificação de postura | Levantamento de tecnologia | Não está na lista. Depende de teste com pessoa coberta. |
 
 ## Decisões pendentes
 
 | Decisão | Requisitos afetados | Responsáveis | Prazo |
 |---|---|---|---|
-| Quais eventos sonoros entram | RF06 | Analistas, pesquisadores, gestão | 22/10 |
-| Sessão ao vivo ou importação de gravação | RF01, RF02, RNF08 | Analistas, gestão | Antes de 15/10 |
-| Limiar e duração mínima de movimento | RF05 | Analistas | 22/10 |
-| Descarte do vídeo bruto e prazo de guarda | RNF03, RNF04 | Pesquisadores, gestão | A definir |
-| Controle de acesso e criptografia | RNF01, RNF02 | Analistas, gestão | A definir |
-| Equipamento de captura | RF03, RF04 | Analistas, pesquisadores | A confirmar |
+| Limiares e critérios de classificação de comportamentos | RF09, RN01–RN05 | Analistas, pesquisadores | A definir |
+| Estados comportamentais válidos (vigília, possível sono, indeterminado?) | RF10, RN07 | Pesquisadores, gestão | A definir |
+| Módulo pipeline que liga captura → detecção → classificação → registro | RF02, RF03–RF07, RF08 | Analistas, gestão | A definir |
+| Descarte do vídeo bruto e prazo de guarda | RNF06, RNF11 | Pesquisadores, gestão | A definir |
+| Controle de acesso e criptografia | RNF06 | Analistas, gestão | A definir |
+| Termo de consentimento LGPD | RNF11 | Pesquisadores, gestão | A definir |
 
 ## Resumo da situação
 
-| Situação | RF | RNF |
-|---|---|---|
-| Implementado | 1 (RF07) | 1 (RNF07) |
-| Estrutura pronta | 3 (RF01, RF02, RF10) | 4 (RNF01, RNF02, RNF05, RNF06) |
-| Assinatura definida | 6 (RF03, RF04, RF05, RF08, RF09, RF11) | — |
-| Aguardando decisão | 1 (RF06) | 2 (RNF03, RNF04) |
-| Não iniciado | — | 1 (RNF08) |
-| **Total** | **11** | **8** |
+| Situação | RF | RNF | RN |
+|---|---|---|---|
+| Implementado | 2 (RF08, RF12) | 5 (RNF04, RNF05, RNF09, RNF10, RNF12) | 2 (RN08, RN10) |
+| Estrutura pronta | 1 (RF01) | 4 (RNF01, RNF06, RNF07, RNF08) | 1 (RN09) |
+| Assinatura definida | 10 (RF02–RF07, RF09–RF11, RF13–RF15) | 1 (RNF02) | 7 (RN01–RN07) |
+| Não iniciado | — | 2 (RNF03, RNF11) | — |
+| **Total** | **15** | **12** | **10** |
 
 ## Histórico de alterações
 
 | Data | Versão | Alteração | Responsável |
 |---|---|---|---|
 | 08/10/2026 | 1.0 | Criação da matriz junto com a estrutura inicial do software | Analistas |
+| 15/10/2026 | 2.0 | Reescrita completa para alinhar à nova lista de requisitos (estudo de caso). Removido áudio. Adicionados módulos classificacao/ e novas detecções. Banco reescrito com tabelas separadas. | Analistas |

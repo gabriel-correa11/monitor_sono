@@ -1,17 +1,44 @@
-# RNF01/RNF02: dados locais nunca vão para o repositório
+# ============================================================
+# PRIVACIDADE (LGPD): nenhum vídeo, áudio ou dado pessoal entra no repositório.
+# As gravações ficam só na pasta compartilhada restrita da equipe.
+# Não remova nem afrouxe estas regras.
+# ============================================================
+
+# Pastas de dados locais
 dados/
+gravacoes/
+frames/
+capturas/
 
 # Vídeo
 *.mp4
 *.avi
 *.mkv
+*.mov
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+*.mpg
+*.mpeg
 *.h264
+*.h265
+*.264
+*.265
 
 # Áudio
 *.wav
 *.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.opus
+*.wma
+*.amr
 
-# Banco
+# Banco de dados
 *.db
 *.sqlite
 *.sqlite3
@@ -30,10 +57,9 @@ dist/
 .idea/
 .vscode/
 
+# Claude Code (configuração pessoal de cada um)
+.claude/settings.local.json
+
 # Variáveis de ambiente e segredos
 .env
 .streamlit/secrets.toml
-
-# Claude Code
-CLAUDE.md
-.claude/
