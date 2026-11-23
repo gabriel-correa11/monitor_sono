@@ -15,13 +15,20 @@ def eh_arquivo(fonte: int | str) -> bool:
     return isinstance(fonte, str) and Path(fonte).is_file()
 
 
-def capturar_quadros(fonte: int | str, fps_analise: int) -> Iterator[tuple[float, np.ndarray]]:
+def capturar_quadros(
+    fonte: int | str,
+    fps_analise: int,
+    *,
+    resolucao: tuple[int, int] | None = config.RESOLUCAO_ANALISE,
+) -> Iterator[tuple[float, np.ndarray]]:
     """RF02. Devolve (segundo, quadro) a fps_analise quadros por segundo.
 
     - fonte: índice da câmera (ex.: 0), endereço do dispositivo ou caminho de uma gravação.
     - segundo: tempo desde o início da captura. Com câmera, vem do relógio; com gravação, do tempo do
       próprio vídeo, para que a leitura (mais rápida que o tempo real) não altere os horários.
-    - quadro: imagem BGR redimensionada para config.RESOLUCAO_ANALISE.
+    - quadro: imagem BGR redimensionada para `resolucao` (padrão: config.RESOLUCAO_ANALISE). Com
+      resolucao=None, o quadro sai na resolução original da câmera, para a detecção de rosto e olhos
+      (RF04, RF05), que precisa de mais detalhe.
 
     Os quadros não usados são só lidos (grab), sem decodificar a imagem, para poupar processamento.
     Com câmera, uma falha momentânea de leitura não encerra a captura (RNF08): ela só termina depois de
@@ -63,6 +70,6 @@ def capturar_quadros(fonte: int | str, fps_analise: int) -> Iterator[tuple[float
             proximo += intervalo
             if proximo <= segundo:  # câmera travou: não entregar rajada de quadros
                 proximo = segundo + intervalo
-            yield segundo, cv2.resize(quadro, config.RESOLUCAO_ANALISE)
+            yield segundo, quadro if resolucao is None else cv2.resize(quadro, resolucao)
     finally:
         camera.release()

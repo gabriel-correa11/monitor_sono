@@ -100,6 +100,14 @@ def test_quadros_na_resolucao_de_analise(tmp_path):
         assert quadro.shape[:2] == (altura, largura)
 
 
+def test_resolucao_none_entrega_quadro_original(tmp_path):
+    # RF04, RF05: rosto e olhos precisam do quadro na resolução original da câmera.
+    caminho = tmp_path / "sintetico.avi"
+    gerar_video(caminho, quadros=3, tamanho=(640, 480))
+    for _, quadro in video.capturar_quadros(str(caminho), fps_analise=100, resolucao=None):
+        assert quadro.shape[:2] == (480, 640)
+
+
 def test_fonte_invalida_gera_erro(tmp_path):
     with pytest.raises(RuntimeError):
         next(video.capturar_quadros(str(tmp_path / "nao_existe.avi"), fps_analise=1))
