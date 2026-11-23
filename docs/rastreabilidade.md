@@ -35,7 +35,7 @@ Caminhos relativos a `src/monitor_sono/`.
 | ID | Requisito | Arquivo | Função / elemento | Situação | Teste |
 |---|---|---|---|---|---|
 | RF01 | Iniciar e encerrar sessão de monitoramento | `sessao/__init__.py` | `iniciar_sessao()`, `encerrar_sessao()` | Estrutura pronta | Indireto, via `banco.criar_sessao` |
-| RF02 | Capturar imagens em tempo real pela câmera | `captura/video.py` | `capturar_quadros()` | Assinatura definida | — |
+| RF02 | Capturar imagens em tempo real pela câmera | `captura/video.py` | `capturar_quadros()` | Implementado | `test_captura.py` (4 testes) |
 | RF03 | Identificar presença de pessoa na área monitorada | `deteccao/presenca.py` | `detectar_presenca()` | Assinatura definida | — |
 | RF04 | Detectar a região facial do indivíduo | `deteccao/rosto.py` | `detectar_rosto()` | Assinatura definida | — |
 | RF05 | Identificar estado dos olhos (abertos, fechados, indeterminado) | `deteccao/olhos.py` | `detectar_estado_olhos()` | Assinatura definida | — |
@@ -117,9 +117,9 @@ Caminhos relativos a `src/monitor_sono/`.
 
 | Situação | RF | RNF | RN |
 |---|---|---|---|
-| Implementado | 2 (RF08, RF12) | 5 (RNF04, RNF05, RNF09, RNF10, RNF12) | 2 (RN08, RN10) |
+| Implementado | 3 (RF02, RF08, RF12) | 5 (RNF04, RNF05, RNF09, RNF10, RNF12) | 2 (RN08, RN10) |
 | Estrutura pronta | 1 (RF01) | 4 (RNF01, RNF06, RNF07, RNF08) | 1 (RN09) |
-| Assinatura definida | 10 (RF02–RF07, RF09–RF11, RF13–RF15) | 1 (RNF02) | 7 (RN01–RN07) |
+| Assinatura definida | 9 (RF03–RF07, RF09–RF11, RF13–RF15) | 1 (RNF02) | 7 (RN01–RN07) |
 | Não iniciado | — | 2 (RNF03, RNF11) | — |
 | **Total** | **15** | **12** | **10** |
 
@@ -129,3 +129,4 @@ Caminhos relativos a `src/monitor_sono/`.
 |---|---|---|---|
 | 08/10/2026 | 1.0 | Criação da matriz junto com a estrutura inicial do software | Analistas |
 | 15/10/2026 | 2.0 | Reescrita completa para alinhar à nova lista de requisitos (estudo de caso). Removido áudio. Adicionados módulos classificacao/ e novas detecções. Banco reescrito com tabelas separadas. | Analistas |
+| 23/11/2026 | 2.1 | RF02 implementado: `capturar_quadros()` com OpenCV, entrega quadros a `fps_analise` e redimensiona para `RESOLUCAO_ANALISE`. Testes com vídeo sintético. | Pedro Motta |
