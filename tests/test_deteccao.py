@@ -4,7 +4,7 @@ presença (RF03), com quadros gerados em código."""
 import numpy as np
 
 from monitor_sono import config
-from monitor_sono.deteccao import cabeca, movimento, olhos, rosto, visibilidade
+from monitor_sono.deteccao import cabeca, movimento, olhos, presenca, rosto, visibilidade
 from monitor_sono.tipos import Rosto
 
 
@@ -284,3 +284,37 @@ def test_rosto_que_reaparece_depois_da_folga_nao_e_movimento():
     for _ in range(config.FOLGA_ROSTO_QUADROS + 1):
         a.atualizar(None)
     assert not a.atualizar(deslocado(ROSTO_GRANDE, 1.0))
+
+
+# ---------------------------------------------------------------- RF03 — presença e RF15 — sem presença
+
+
+def test_presenca_dentro_e_fora_da_janela():
+    janela = config.JANELA_PRESENCA_S
+    assert presenca.detectar_presenca(segundo=janela - 1, ultima_evidencia=0.0)
+    assert not presenca.detectar_presenca(segundo=janela + 1, ultima_evidencia=0.0)
+
+
+def test_rosto_ou_movimento_renovam_a_presenca():
+    janela = config.JANELA_PRESENCA_S
+    p = presenca.AcompanhamentoPresenca()
+    assert p.atualizar(10.0, rosto=False, movimento=True)
+    assert p.atualizar(janela, rosto=False, movimento=False)  # movimento aos 10 s ainda vale
+    assert not p.atualizar(janela + 20, rosto=False, movimento=False)
+    assert p.atualizar(janela + 30, rosto=True, movimento=False)
+
+
+def test_comeco_da_sessao_nao_e_ausencia():
+    assert presenca.AcompanhamentoPresenca().atualizar(60.0, rosto=False, movimento=False)
+
+
+def test_sem_presenca_vira_visibilidade_insuficiente():
+    ok = visibilidade.avaliar_visibilidade(com_retangulo(cena(), 0.1), 7.0)
+    v = visibilidade.considerar_presenca(ok, presente=False)
+    assert not v.adequada and v.motivo == "sem_presenca" and v.segundo == 7.0
+    assert visibilidade.considerar_presenca(ok, presente=True) == ok
+
+
+def test_imagem_escura_mantem_o_motivo_original():
+    escura = visibilidade.avaliar_visibilidade(cena(brilho=10), 8.0)
+    assert visibilidade.considerar_presenca(escura, presente=False).motivo == "escura"

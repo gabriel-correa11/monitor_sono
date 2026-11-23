@@ -24,7 +24,7 @@ class Visibilidade:
 
     segundo: float
     adequada: bool
-    motivo: str  # "ok", "escura" ou "sem_contraste"
+    motivo: str  # "ok", "escura", "sem_contraste" ou "sem_presenca" (RF03)
 
 
 @dataclass(frozen=True)
