@@ -2,7 +2,7 @@
 
 **Projeto:** Sistema de Monitoramento do Sono por Câmera e Inteligência Artificial
 **Disciplina:** Tópicos Especiais em Engenharia de Software
-**Versão:** 3.0 (sistema funcionando de ponta a ponta — estudo de caso)
+**Versão:** 3.1 (rosto, olhos, cabeça e presença — estudo de caso)
 
 ## Para que serve este documento
 
@@ -36,20 +36,20 @@ Caminhos relativos a `src/monitor_sono/`.
 | ID | Requisito | Arquivo | Função / elemento | Situação | Teste |
 |---|---|---|---|---|---|
 | RF01 | Iniciar e encerrar sessão de monitoramento | `pipeline.py`, `registro/banco.py`, `sessao/__init__.py` | `analisar()`, `criar_sessao()`, `finalizar_sessao()` | Implementado | `test_pipeline.py`, `test_registro.py` |
-| RF02 | Capturar imagens em tempo real pela câmera | `captura/video.py` | `capturar_quadros()` | Implementado | `test_captura.py` (7 testes) |
-| RF03 | Identificar presença de pessoa na área monitorada | `deteccao/presenca.py` | `detectar_presenca()` | Aguardando decisão | — |
-| RF04 | Detectar a região facial do indivíduo | `deteccao/rosto.py` | `detectar_rosto()` | Aguardando decisão | — |
-| RF05 | Identificar estado dos olhos (abertos, fechados, indeterminado) | `deteccao/olhos.py` | `detectar_estado_olhos()` | Aguardando decisão | — |
-| RF06 | Detectar movimentos da cabeça | `deteccao/cabeca.py` | `detectar_movimento_cabeca()` | Aguardando decisão | — |
+| RF02 | Capturar imagens em tempo real pela câmera | `captura/video.py` | `capturar_quadros()` | Implementado | `test_captura.py` (8 testes) |
+| RF03 | Identificar presença de pessoa na área monitorada | `deteccao/presenca.py` | `detectar_presenca()`, `AcompanhamentoPresenca` | Implementado | `test_deteccao.py` |
+| RF04 | Detectar a região facial do indivíduo | `deteccao/rosto.py` | `detectar_rosto()`, `mesmo_rosto()` | Implementado | `test_deteccao.py` (cascata simulada) |
+| RF05 | Identificar estado dos olhos (abertos, fechados, indeterminado) | `deteccao/olhos.py` | `detectar_estado_olhos()`, `AcompanhamentoOlhos` | Implementado | `test_deteccao.py`, `test_pipeline.py` (detector simulado) |
+| RF06 | Detectar movimentos da cabeça | `deteccao/cabeca.py`, `pipeline.py` | `detectar_movimento_cabeca()`, `AcompanhamentoCabeca` | Implementado | `test_deteccao.py`, `test_pipeline.py` |
 | RF07 | Identificar movimentos corporais e mudanças de posição | `deteccao/movimento.py` | `analisar_movimento()`, `detectar_movimento_corporal()`, `detectar_mudanca_posicao()` | Implementado | `test_deteccao.py` |
 | RF08 | Registrar movimentos com horários | `registro/banco.py`, `pipeline.py` | `registrar_comportamento()`, tabela `comportamentos` | Implementado | `test_registro.py`, `test_pipeline.py` |
-| RF09 | Classificar comportamentos conforme critérios | `classificacao/comportamentos.py` | `classificar_comportamentos()`, `periodos_maior_atividade()` | Parcial | `test_classificacao.py` |
-| RF10 | Estimar estados de sono a partir de características visuais | `classificacao/estados.py` | `estimar_estados()` | Parcial | `test_classificacao.py` |
+| RF09 | Classificar comportamentos conforme critérios | `classificacao/comportamentos.py` | `classificar_comportamentos()`, `periodos_maior_atividade()` | Implementado | `test_classificacao.py`, `test_pipeline.py` |
+| RF10 | Estimar estados de sono a partir de características visuais | `classificacao/estados.py` | `estimar_estados()` | Parcial | `test_classificacao.py`, `test_pipeline.py` |
 | RF11 | Identificar períodos de movimentação e ausência | `classificacao/periodos.py` | `identificar_periodos()` | Implementado | `test_classificacao.py` |
 | RF12 | Armazenar resultados das classificações | `registro/banco.py`, `pipeline.py` | `registrar_estado()`, tabela `estados` | Implementado | `test_registro.py`, `test_pipeline.py` |
 | RF13 | Apresentar histórico cronológico de comportamentos e estados | `dashboard/app.py` | seção "Linha do tempo" (Observado e Estimado) | Implementado | Verificação manual do dashboard |
 | RF14 | Gerar relatório da sessão | `dashboard/app.py` | "Resumo da sessão", "Relatório" (CSV) | Implementado | Verificação manual do dashboard |
-| RF15 | Sinalizar visibilidade insuficiente da câmera | `deteccao/visibilidade.py`, `dashboard/app.py` | `avaliar_visibilidade()`, seção "Avisos" | Parcial | `test_deteccao.py`, `test_classificacao.py` |
+| RF15 | Sinalizar visibilidade insuficiente da câmera | `deteccao/visibilidade.py`, `dashboard/app.py` | `avaliar_visibilidade()`, `considerar_presenca()`, seção "Avisos" | Implementado | `test_deteccao.py`, `test_classificacao.py` |
 
 ### Observações
 
@@ -58,21 +58,37 @@ Caminhos relativos a `src/monitor_sono/`.
   real de início pode ser informada com `--inicio`.
 - **RF02**: corrigida a perda de quadros com câmera a 5 fps (a versão anterior entregava 3.000 quadros por hora em
   vez de 3.600) e acrescentada a tolerância a falhas de leitura (RNF08).
-- **RF03 a RF06**: o OpenCV 5, usado no projeto, não traz mais detector de rosto e olhos pronto (as cascatas Haar
-  saíram da biblioteca principal). Implementar exige decidir um modelo ou uma biblioteca nova (ver decisões
-  pendentes). As funções continuam com `NotImplementedError` explicando o motivo.
-- **RF09**: classifica movimento corporal, mudança de posição (RN05), ausência de movimento, maior atividade motora
-  (RN04) e visibilidade insuficiente. Olhos abertos/fechados e movimento da cabeça dependem de RF05 e RF06.
-- **RF10**: as regras RN01, RN02, RN03, RN06 e RN07 estão implementadas e testadas com dados simulados. Sem a
-  detecção de olhos (RF05), o resultado nas gravações reais é sempre "indeterminado", como mandam RN03 e RN06.
-- **RF15**: detecta imagem escura ou sem contraste. Pessoa fora do enquadramento depende de RF03 e RF04.
+- **RF03 a RF06**: decisão da equipe: usar o OpenCV 4.x (`opencv-python>=4.9,<5`), que traz as cascatas Haar de
+  rosto e olhos em `cv2.data.haarcascades`. O OpenCV 5 não traz mais essas cascatas.
+- **RF03**: há presença se houve rosto ou movimento nos últimos 30 min (`config.JANELA_PRESENCA_S`). A janela é longa
+  porque uma pessoa dormindo parada não gera movimento e muitas vezes não mostra o rosto.
+- **RF04**: cascatas frontal e de perfil (dos dois lados), com histograma equalizado, numa cópia de 960 px de
+  largura do quadro original. Quando há rosto no quadro anterior, a busca começa ao redor dele.
+- **RF05**: um quadro sozinho só dá "abertos" ou "indeterminado". "Fechados" exige rosto de frente, com pelo menos
+  120 px e nítido, acompanhado entre quadros, com olhos já vistos abertos nesse acompanhamento e sumidos por 5
+  quadros seguidos (RN06). **Limitação:** se o rosto some por mais que a folga (3 quadros), o acompanhamento
+  reinicia e "fechados" só volta depois de os olhos serem vistos abertos de novo. Por isso o "possível sono" tende a
+  aparecer só logo depois de a pessoa fechar os olhos.
+- **RF06**: deslocamento do centro do rosto de pelo menos 0,25 largura de rosto entre quadros na mesma orientação,
+  ou troca de frente para perfil (ou o contrário) mantida por 2 quadros seguidos. O detector alterna entre frente e
+  perfil no mesmo rosto parado; sem essa confirmação, a alternância viraria movimento falso.
+- **RF09**: classifica todos os comportamentos da seção 4: olhos abertos e fechados (RF05), movimento da cabeça
+  (RF06), movimento corporal, mudança de posição (RN05), ausência de movimento, maior atividade motora (RN04) e
+  visibilidade insuficiente.
+- **RF10**: as regras RN01, RN02, RN03, RN06 e RN07 estão implementadas e testadas com dados simulados, e o teste de
+  ponta a ponta mostra os olhos chegando até "vigília" e "possível sono" no banco. **Continua Parcial:** nas duas
+  gravações do estudo de caso, com a câmera infravermelha a distância, o rosto aparece em menos de 10% do tempo e os
+  olhos são determinados em 0,1% dos quadros. Por isso o estado fica 100% "indeterminado", como mandam RN06 e RN07.
+  Ver `material-documentacao.md`.
+- **RF15**: imagem escura ou sem contraste, e "sem presença" (nenhum rosto nem movimento por 30 min), que cobre
+  pessoa fora do enquadramento ou câmera virada.
 
 ## Requisitos não funcionais
 
 | ID | Requisito | Como é atendido hoje | Situação | Falta |
 |---|---|---|---|---|
 | RNF01 | Utilizar exclusivamente câmera | Só existe captura de imagem (`captura/video.py`); áudio removido | Implementado | — |
-| RNF02 | Processamento automático por visão computacional | OpenCV: diferença entre quadros (`deteccao/movimento.py`) e análise da imagem (`deteccao/visibilidade.py`) | Implementado | Detecção de rosto e olhos |
+| RNF02 | Processamento automático por visão computacional | OpenCV: diferença entre quadros (`deteccao/movimento.py`), análise da imagem (`deteccao/visibilidade.py`) e cascatas Haar de rosto e olhos (`deteccao/rosto.py`, `deteccao/olhos.py`) | Implementado | — |
 | RNF03 | Funcionar sem interação constante do usuário | `analisar` roda sozinho até o fim da gravação ou até Ctrl+C na câmera | Implementado | — |
 | RNF04 | Precisão temporal de no mínimo um segundo | Horários gravados em segundos (`isoformat(timespec="seconds")`) | Implementado | — |
 | RNF05 | Preservar integridade dos registros | Chaves estrangeiras com `PRAGMA foreign_keys = ON` | Implementado | — |
@@ -88,12 +104,12 @@ Caminhos relativos a `src/monitor_sono/`.
 
 | ID | Regra | Onde se aplica | Situação |
 |---|---|---|---|
-| RN01 | Olhos abertos contínuos → evidência de vigília | `classificacao/estados.py` | Implementado (depende de RF05 para dados reais) |
-| RN02 | Olhos fechados contínuos + outros comportamentos → possível sono | `classificacao/estados.py` | Implementado (depende de RF05 para dados reais) |
+| RN01 | Olhos abertos contínuos → evidência de vigília | `classificacao/estados.py`, `deteccao/olhos.py` | Implementado (nas gravações, olhos quase nunca determinados) |
+| RN02 | Olhos fechados contínuos + outros comportamentos → possível sono | `classificacao/estados.py`, `deteccao/olhos.py` | Implementado (nas gravações, olhos quase nunca determinados) |
 | RN03 | Ausência prolongada de movimentos → contribui, mas não basta isoladamente | `classificacao/estados.py`, `classificacao/periodos.py` | Implementado |
 | RN04 | Movimentos frequentes → períodos de maior atividade motora | `classificacao/comportamentos.py` | Implementado |
 | RN05 | Mudanças bruscas de posição → eventos de movimentação corporal | `deteccao/movimento.py`, `classificacao/comportamentos.py` | Implementado |
-| RN06 | Olhos não visíveis → não classificar como fechados | `tipos.EstadoOlhos`, `classificacao/estados.py` | Implementado na classificação; detecção pendente (RF05) |
+| RN06 | Olhos não visíveis → não classificar como fechados | `deteccao/olhos.py`, `tipos.EstadoOlhos`, `classificacao/estados.py` | Implementado |
 | RN07 | Informações visuais insuficientes → estado indeterminado | `classificacao/estados.py`, `classificacao/periodos.py` | Implementado |
 | RN08 | Classificações associadas a horário ou intervalo | Colunas `inicio` e `fim`; tipos com início e fim | Implementado |
 | RN09 | Classificações baseadas exclusivamente em informações visuais | Toda entrada vem de quadros da câmera | Implementado |
@@ -113,9 +129,9 @@ Caminhos relativos a `src/monitor_sono/`.
 
 | Decisão | Requisitos afetados | Responsáveis |
 |---|---|---|
-| Detector de rosto e olhos: modelo YuNet do OpenCV (licença MIT, sem pacote novo, mas exige baixar o arquivo do modelo) ou MediaPipe (Apache 2.0, pacote novo) | RF03 a RF06, RF10 | Analistas |
+| Regra de "olhos fechados": rever com um gabarito se a exigência de olhos vistos antes pode ser relaxada sem violar a RN06 | RF05, RF10, RN02, RN06 | Pesquisadores, analistas |
 | Confirmar os estados provisórios: vigília, possível sono, indeterminado | RF10 | Pesquisadores, gestão |
-| Confirmar os parâmetros provisórios de `config.py` (limiares e tempos das regras) com um gabarito das gravações | RF07, RF09 a RF11, RN01 a RN05 | Pesquisadores, analistas |
+| Confirmar os parâmetros provisórios de `config.py` (limiares e tempos das regras, incluindo `CONTRASTE_MINIMO_ROSTO`) com um gabarito das gravações | RF03 a RF07, RF09 a RF11, RN01 a RN05 | Pesquisadores, analistas |
 | Descarte do vídeo bruto e prazo de guarda | RNF06, RNF11 | Pesquisadores, gestão |
 | Controle de acesso e criptografia | RNF06 | Analistas, gestão |
 | Termo de consentimento LGPD | RNF11 | Pesquisadores, gestão |
@@ -124,10 +140,9 @@ Caminhos relativos a `src/monitor_sono/`.
 
 | Situação | RF | RNF | RN |
 |---|---|---|---|
-| Implementado | 8 (RF01, RF02, RF07, RF08, RF11, RF12, RF13, RF14) | 10 (RNF01 a RNF05, RNF07 a RNF10, RNF12) | 10 (RN01 a RN10) |
-| Parcial | 3 (RF09, RF10, RF15) | 1 (RNF11) | — |
+| Implementado | 14 (RF01 a RF09, RF11 a RF15) | 10 (RNF01 a RNF05, RNF07 a RNF10, RNF12) | 10 (RN01 a RN10) |
+| Parcial | 1 (RF10) | 1 (RNF11) | — |
 | Estrutura pronta | — | 1 (RNF06) | — |
-| Aguardando decisão | 4 (RF03 a RF06) | — | — |
 | **Total** | **15** | **12** | **10** |
 
 ## Histórico de alterações
@@ -138,3 +153,4 @@ Caminhos relativos a `src/monitor_sono/`.
 | 15/10/2026 | 2.0 | Reescrita completa para alinhar à nova lista de requisitos (estudo de caso). Removido áudio. Adicionados módulos classificacao/ e novas detecções. Banco reescrito com tabelas separadas. | Analistas |
 | 23/11/2026 | 2.1 | RF02 implementado: `capturar_quadros()` com OpenCV, entrega quadros a `fps_analise` e redimensiona para `RESOLUCAO_ANALISE`. Testes com vídeo sintético. | Pedro Motta |
 | 23/11/2026 | 3.0 | Sistema de ponta a ponta: correção do RF02 (perda de quadros e tolerância a falhas), detecção de movimento e visibilidade, classificação com as regras RN01 a RN07, pipeline com o comando `analisar`, dashboard e análise das duas gravações do estudo de caso. RF03 a RF06 aguardam decisão sobre o detector de rosto. | Gabriel Correa |
+| 23/11/2026 | 3.1 | RF03 a RF06 implementados com as cascatas Haar do OpenCV 4.x (dependência limitada a `<5`): presença, rosto, estado dos olhos com regra conservadora (RN06) e movimento da cabeça, ligados no pipeline. RF09 e RF15 passam a Implementado. RF10 continua Parcial: nas gravações do estudo de caso, os olhos são determinados em 0,1% dos quadros. | Gabriel Correa |

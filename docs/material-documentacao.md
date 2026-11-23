@@ -34,7 +34,7 @@ python -m monitor_sono analisar 0 --autorizado     # câmera ao vivo; Ctrl+C enc
 streamlit run src/monitor_sono/dashboard/app.py
 ```
 
-**Rodar os testes:** `pytest` (36 testes).
+**Rodar os testes:** `pytest` (67 testes).
 
 ## Como o sistema funciona
 
@@ -46,6 +46,9 @@ câmera ou gravação → captura → detecção → classificação → banco �
 2. **Detecção (RF07, RF15):** compara cada quadro com o anterior e mede quanto da imagem mudou. Acima de 0,5% é
    movimento; acima de 10% é mudança brusca de posição. Imagem escura ou sem contraste é aviso de visibilidade.
    Quando mais da metade da imagem muda de uma vez, é troca de iluminação, não movimento.
+   **Rosto, olhos, cabeça e presença (RF03 a RF06):** procura o rosto com as cascatas Haar do OpenCV 4.x (de frente
+   e de perfil), avalia os olhos só em rosto de frente, grande e nítido, compara a posição do rosto entre quadros
+   e considera a pessoa presente se houve rosto ou movimento nos últimos 30 min.
 3. **Classificação (RF09, RF10, RF11):** junta os movimentos em períodos, identifica ausência de movimento,
    períodos de maior atividade motora (RN04) e estima os estados aplicando as regras de negócio.
 4. **Banco (RF08, RF12):** grava o que foi **observado** (comportamentos) separado do que foi **estimado**
@@ -62,32 +65,41 @@ Duas gravações feitas pela câmera da equipe, analisadas localmente. Nenhuma i
 | Início (horário da câmera) | 09/11/2026 03:22:48 | 10/11/2026 04:23:21 |
 | Duração | 2 h 39 min | 3 h 52 min |
 | Câmera | 2304x1296, cerca de 5 quadros por segundo | 2304x1296, 5 quadros por segundo |
-| Quadros analisados (1 por segundo) | 9.486 | 13.949 |
-| Segundos com movimento | 1.020 (10,8%) | 1.280 (9,2%) |
-| Períodos de movimento | 227 | 512 |
-| Mudanças bruscas de posição | 236 | 222 |
-| Períodos de maior atividade motora (RN04) | 103 (26 min no total) | 286 (17 min no total) |
-| Ausência de movimento (períodos de 1 min ou mais) | 16 períodos, 84 min (53% da sessão) | 32 períodos, 111 min (48% da sessão) |
-| Maior período sem movimento | 21 min | 22 min |
+| Quadros analisados (1 por segundo) | 9.485 | 13.948 |
+| Períodos de movimento | 291 (42 min no total) | 428 (60 min no total) |
+| Mudanças bruscas de posição | 347 | 394 |
+| Períodos de maior atividade motora (RN04) | 218 (38 min no total) | 323 (55 min no total) |
+| Ausência de movimento (períodos de 1 min ou mais) | 16 períodos, 76 min (48% da sessão) | 29 períodos, 98 min (42% da sessão) |
+| Maior período sem movimento | 20 min | 15 min |
 | Ausências prolongadas (5 min ou mais, RN03) | 6 | 8 |
-| Avisos de visibilidade insuficiente | 0 | 0 |
-| Trocas de iluminação detectadas | 1 | 24 |
+| Quadros com rosto (RF04) | 402 (4,2%): 145 de frente, 257 de perfil | 1.372 (9,8%): 1.322 de frente, 50 de perfil |
+| Rostos aproveitáveis para os olhos (de frente, 120 px ou mais, nítidos) | 41 (0,4%) | 156 (1,1%) |
+| Olhos determinados (RF05) | 7 (0,1%): 7 abertos, 0 fechados | 8 (0,1%): 8 abertos, 0 fechados |
+| Movimentos da cabeça (RF06) | 11 | 11 |
+| Avisos de visibilidade insuficiente (inclui "sem presença") | 0 | 0 |
 | Estado estimado | 100% indeterminado | 100% indeterminado |
-| Tempo de processamento | cerca de 3 min | cerca de 3,5 min |
+| Tempo de processamento | 7,4 min | 10,3 min |
+
+Os números de movimento mudaram em relação à análise anterior, que foi feita em partes, em outro ambiente e com
+OpenCV 5; os desta tabela, com OpenCV 4.x, são os oficiais. Segundos com movimento e trocas de iluminação não foram
+medidos nesta análise. O início das sessões foi informado como 03:22 e 04:23, porque o comando aceita hora e minuto.
 
 **Leitura dos resultados:**
 
-- O sistema registrou movimento em cerca de 10% do tempo e ausência de movimento em cerca de metade do tempo, com
-  períodos de até 22 minutos parado.
-- O estado ficou **indeterminado** o tempo todo porque esta versão ainda não detecta os olhos. Pelas regras RN02,
-  RN03 e RN06, a falta de movimento sozinha não basta para estimar sono. Esse comportamento é o esperado e mostra
-  que o sistema não "chuta" um estado sem evidência.
-- O número de mudanças bruscas de posição (mais de 200 por gravação) parece alto para uma noite de sono. É provável
+- O sistema registrou períodos de movimento em cerca de um quarto do tempo e ausência de movimento em 42% a 48% do
+  tempo, com períodos de até 20 minutos parado.
+- **Conclusão do estudo de caso:** com esta câmera infravermelha a distância, o sistema mede movimento com
+  confiança, mas o rosto aparece em menos de 10% do tempo e os olhos são determinados em só 0,1% dos quadros. Por
+  isso o estado fica **indeterminado** o tempo todo, como mandam RN06 e RN07: sem evidência dos olhos, a falta de
+  movimento sozinha não basta para estimar sono (RN03). O sistema não "chuta" um estado sem evidência.
+- Prováveis motivos de os olhos quase não aparecerem: a pessoa fica de lado ou coberta (na gravação 1, a maioria dos
+  rostos achados é de perfil); com o rosto em cerca de 150 px, o olho fica com 25 a 30 px, perto do limite do
+  detector; a cascata de olhos foi treinada com fotos comuns, não com imagem infravermelha; e a regra de "olhos
+  fechados" é conservadora (exige olhos vistos abertos antes, no mesmo acompanhamento do rosto).
+- O número de mudanças bruscas de posição (mais de 300 por gravação) parece alto para uma noite de sono. É provável
   que o limite de 10% da imagem esteja baixo para esta câmera. O valor é provisório e precisa ser confirmado com um
   gabarito.
-- As 24 trocas de iluminação da gravação 2 merecem verificação: podem ser luz do ambiente ou o ajuste automático do
-  infravermelho da câmera.
-- O processamento é rápido: cerca de 1 minuto por hora de gravação.
+- O processamento continua rápido: cerca de 3 minutos por hora de gravação, já com a detecção de rosto e olhos.
 
 ## Parâmetros usados (todos provisórios)
 
@@ -105,6 +117,16 @@ Ficam em `src/monitor_sono/config.py`.
 | Ausência prolongada | 5 min | RN03 |
 | Movimentos frequentes | 10 segundos com movimento em 1 min | RN04 |
 | Período contínuo de olhos abertos ou fechados | 1 min | RN01, RN02 |
+| Largura da cópia em que o rosto é procurado | 960 px | Rosto (RF04) |
+| Menor rosto procurado | 60 px da imagem original | Rosto (RF04) |
+| Menor rosto em que os olhos são avaliados | 120 px da imagem original | Olhos (RF05, RN06) |
+| Contraste mínimo do rosto (desvio padrão) | 20 | Olhos (RF05, RN06) |
+| Quadros seguidos sem olhos para "fechados" | 5 | Olhos (RF05, RN06) |
+| Quadros sem rosto tolerados no acompanhamento | 3 | Olhos e cabeça (RF05, RF06) |
+| Deslocamento do rosto para movimento da cabeça | 0,25 da largura do rosto | Cabeça (RF06) |
+| Razão máxima de tamanho entre dois rostos | 1,5 | Cabeça (RF06) |
+| Quadros na nova orientação (frente/perfil) | 2 | Cabeça (RF06) |
+| Janela de presença (rosto ou movimento) | 30 min | Presença (RF03), visibilidade (RF15) |
 
 ## Limitações
 
@@ -112,24 +134,33 @@ Ficam em `src/monitor_sono/config.py`.
   de 1h15 não foi gravada, provavelmente perto dos 5 minutos de vídeo, onde o sistema detectou uma troca brusca de
   toda a imagem. Os horários da gravação 1 depois desse ponto ficam adiantados em relação à câmera. Além disso, os
   dois arquivos marcam o tempo cerca de 2,5% mais devagar que o relógio da câmera.
-- **Rosto, olhos, cabeça e presença (RF03 a RF06) não foram implementados.** O OpenCV 5, usado no projeto, não
-  traz mais detector de rosto pronto. Implementar exige um modelo à parte ou uma biblioteca nova, o que depende de
-  decisão da equipe.
-- **Sem olhos, não há estimativa de sono:** o estado fica sempre indeterminado.
+- **Rosto e olhos quase não são observados com esta câmera:** o rosto aparece em menos de 10% do tempo e os olhos
+  em 0,1% dos quadros (pessoa de lado ou coberta, olho com 25 a 30 px, cascata não treinada para infravermelho).
+  Sem olhos, o estado fica sempre indeterminado (RN06, RN07). O sistema mede movimento com confiança, mas não estima
+  vigília nem possível sono nestas gravações.
+- **Regra de "olhos fechados" conservadora:** "fechados" só vale num rosto acompanhado em que os olhos já foram vistos
+  abertos. Se o acompanhamento do rosto reinicia (o rosto sumiu por mais de 3 quadros), "fechados" só volta depois de
+  os olhos serem vistos abertos de novo. Por isso o "possível sono" tende a aparecer só logo depois de a pessoa
+  fechar os olhos.
 - **Parâmetros sem validação:** foram calibrados olhando só a distribuição dos dados, sem gabarito do que realmente
   aconteceu nas gravações.
 - **Movimento da imagem inteira:** qualquer mudança na cena conta, inclusive de outra pessoa ou objeto no quarto.
-- **Visibilidade:** detecta imagem escura ou sem contraste, mas não pessoa fora do enquadramento.
+- **Visibilidade:** detecta imagem escura ou sem contraste e "sem presença" (nenhum rosto nem movimento por 30 min).
+  Uma pessoa parada e coberta por mais de 30 min também seria marcada como "sem presença".
 
 ## O que ficou pronto e o que é trabalho futuro
 
-**Pronto:** captura de câmera e gravação, detecção de movimento e mudança de posição, avisos de visibilidade,
+**Pronto:** captura de câmera e gravação, detecção de movimento e mudança de posição, detecção de rosto, estado dos
+olhos, movimento da cabeça e presença, avisos de visibilidade,
 períodos de movimento e de ausência, maior atividade motora, regras de estimativa de estado, banco, comando de
 análise, dashboard com relatório e exclusão de sessão, aviso de não diagnóstico.
 
 **Trabalho futuro:**
 
-1. Detector de rosto e olhos (RF03 a RF06), que libera a estimativa de vigília e de possível sono.
-2. Gabarito das gravações, feito por uma pessoa assistindo e anotando os horários, para validar os parâmetros.
-3. Termo de consentimento, controle de acesso e criptografia (RNF06, RNF11).
-4. Teste com a câmera ao vivo por uma noite inteira (RNF08).
+1. Medir a distribuição do contraste dos rostos detectados para recalibrar `CONTRASTE_MINIMO_ROSTO`.
+2. Rever a regra de "olhos fechados" com um gabarito, para ver se a exigência de olhos vistos antes pode ser
+   relaxada sem violar a RN06.
+3. Testar a câmera mais perto do rosto, para o olho ter mais pixels.
+4. Gabarito das gravações, feito por uma pessoa assistindo e anotando os horários, para validar os parâmetros.
+5. Termo de consentimento, controle de acesso e criptografia (RNF06, RNF11).
+6. Teste com a câmera ao vivo por uma noite inteira (RNF08).
