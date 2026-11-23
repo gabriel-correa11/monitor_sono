@@ -4,7 +4,7 @@ presença (RF03), com quadros gerados em código."""
 import numpy as np
 
 from monitor_sono import config
-from monitor_sono.deteccao import movimento, olhos, rosto, visibilidade
+from monitor_sono.deteccao import cabeca, movimento, olhos, rosto, visibilidade
 from monitor_sono.tipos import Rosto
 
 
@@ -232,3 +232,55 @@ def test_outro_rosto_reinicia_acompanhamento(monkeypatch):
     simular_olhos(monkeypatch, [2] + [0] * (n + 2))
     estados = acompanhar([ROSTO_GRANDE] + [longe] * (n + 2))
     assert "fechados" not in estados
+
+
+# ---------------------------------------------------------------- RF06 — cabeça
+
+
+def deslocado(r: Rosto, fracao: float, frontal: bool | None = None) -> Rosto:
+    """Mesmo rosto deslocado na horizontal por `fracao` da largura."""
+    return Rosto(r.x + int(fracao * r.largura), r.y, r.largura, r.altura, r.frontal if frontal is None else frontal)
+
+
+def test_deslocamento_acima_do_limite_e_movimento_da_cabeca():
+    limite = config.DESLOCAMENTO_CABECA
+    assert cabeca.detectar_movimento_cabeca(ROSTO_GRANDE, deslocado(ROSTO_GRANDE, limite + 0.05))
+
+
+def test_deslocamento_abaixo_do_limite_nao_e_movimento():
+    limite = config.DESLOCAMENTO_CABECA
+    assert not cabeca.detectar_movimento_cabeca(ROSTO_GRANDE, deslocado(ROSTO_GRANDE, limite - 0.1))
+
+
+def test_tamanho_muito_diferente_e_outra_deteccao():
+    grande = Rosto(200, 100, 400, 400, True)
+    assert not cabeca.detectar_movimento_cabeca(ROSTO_PEQUENO, grande)
+
+
+def test_acompanhamento_registra_deslocamento():
+    a = cabeca.AcompanhamentoCabeca()
+    movimentos = [a.atualizar(r) for r in (ROSTO_GRANDE, ROSTO_GRANDE, deslocado(ROSTO_GRANDE, 0.5))]
+    assert movimentos == [False, False, True]
+
+
+def test_alternancia_de_frente_e_perfil_nao_e_movimento():
+    # O detector alterna entre frente e perfil no mesmo rosto parado: um quadro isolado não conta.
+    a = cabeca.AcompanhamentoCabeca()
+    sequencia = [ROSTO_GRANDE, ROSTO_PERFIL] * 5
+    assert not any(a.atualizar(r) for r in sequencia)
+
+
+def test_nova_orientacao_mantida_conta_como_movimento():
+    n = config.QUADROS_NOVA_ORIENTACAO
+    a = cabeca.AcompanhamentoCabeca()
+    movimentos = [a.atualizar(r) for r in [ROSTO_GRANDE] * 3 + [ROSTO_PERFIL] * (n + 2)]
+    assert movimentos.count(True) == 1
+    assert movimentos[3 + n - 1]  # conta no quadro em que a nova orientação se confirma
+
+
+def test_rosto_que_reaparece_depois_da_folga_nao_e_movimento():
+    a = cabeca.AcompanhamentoCabeca()
+    a.atualizar(ROSTO_GRANDE)
+    for _ in range(config.FOLGA_ROSTO_QUADROS + 1):
+        a.atualizar(None)
+    assert not a.atualizar(deslocado(ROSTO_GRANDE, 1.0))
