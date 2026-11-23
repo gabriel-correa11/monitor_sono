@@ -22,7 +22,7 @@ def test_registrar_estado(tmp_path):
     db = tmp_path / "teste.db"
     sid = banco.criar_sessao(datetime(2026, 10, 8, 22, 0), caminho=db)
     eid = banco.registrar_estado(
-        sid, "sono_leve", datetime(2026, 10, 8, 23, 0),
+        sid, "indeterminado", datetime(2026, 10, 8, 23, 0),
         fim=datetime(2026, 10, 9, 1, 0), confiavel=False, caminho=db,
     )
     estados = banco.estados_da_sessao(sid, caminho=db)
@@ -45,10 +45,18 @@ def test_excluir_sessao(tmp_path):
         sid, "movimento_corporal", datetime(2026, 10, 8, 23, 0), caminho=db,
     )
     banco.registrar_estado(
-        sid, "acordado", datetime(2026, 10, 8, 23, 0), caminho=db,
+        sid, "vigilia", datetime(2026, 10, 8, 23, 0), caminho=db,
     )
     banco.excluir_sessao(sid, caminho=db)
 
     assert len(banco.listar_sessoes(caminho=db)) == 0
     assert len(banco.comportamentos_da_sessao(sid, caminho=db)) == 0
     assert len(banco.estados_da_sessao(sid, caminho=db)) == 0
+
+
+def test_rejeita_estado_fora_do_escopo(tmp_path):
+    # RN10: estágios clínicos do sono não são estados válidos.
+    db = tmp_path / "teste.db"
+    sid = banco.criar_sessao(datetime.now(), caminho=db)
+    with pytest.raises(ValueError):
+        banco.registrar_estado(sid, "rem", datetime.now(), caminho=db)

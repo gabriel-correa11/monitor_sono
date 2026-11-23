@@ -99,7 +99,9 @@ def registrar_estado(
     confiavel: bool = True,
     caminho: Path | None = None,
 ) -> int:
-    """RF10, RF12. Registra um estado estimado. RNF04, RNF09."""
+    """RF10, RF12. Registra um estado estimado. RNF04, RNF09. Só aceita estados de config.ESTADOS."""
+    if estado not in config.ESTADOS:
+        raise ValueError(f"Estado fora do escopo: {estado}")
     with conectar(caminho) as c:
         cur = c.execute(
             "INSERT INTO estados (sessao_id, estado, inicio, fim, confiavel) "

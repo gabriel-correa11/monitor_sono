@@ -7,4 +7,4 @@ def detectar_movimento_cabeca(
     quadro_anterior: np.ndarray, quadro_atual: np.ndarray
 ) -> bool:
     """RF06. Retorna True se houve movimento da cabeça entre os quadros."""
-    raise NotImplementedError("RF06: a implementar")
+    raise NotImplementedError("RF06: não implementado nesta versão: o OpenCV 5 usado no projeto não traz detector de rosto pronto; exige decisão da equipe sobre modelo ou biblioteca")
