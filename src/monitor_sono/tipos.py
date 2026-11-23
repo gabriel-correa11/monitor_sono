@@ -28,6 +28,17 @@ class Visibilidade:
 
 
 @dataclass(frozen=True)
+class Rosto:
+    """RF04. Região do rosto em px da imagem original e se ele está de frente (False = de perfil)."""
+
+    x: int
+    y: int
+    largura: int
+    altura: int
+    frontal: bool
+
+
+@dataclass(frozen=True)
 class EstadoOlhos:
     """RF05. Estado dos olhos num quadro. RN06: olho não visível é "indeterminado", nunca "fechados"."""
 
