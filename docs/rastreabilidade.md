@@ -116,7 +116,6 @@ Caminhos relativos a `src/monitor_sono/`.
 | Detector de rosto e olhos: modelo YuNet do OpenCV (licença MIT, sem pacote novo, mas exige baixar o arquivo do modelo) ou MediaPipe (Apache 2.0, pacote novo) | RF03 a RF06, RF10 | Analistas |
 | Confirmar os estados provisórios: vigília, possível sono, indeterminado | RF10 | Pesquisadores, gestão |
 | Confirmar os parâmetros provisórios de `config.py` (limiares e tempos das regras) com um gabarito das gravações | RF07, RF09 a RF11, RN01 a RN05 | Pesquisadores, analistas |
-| Data e hora real de início das gravações do estudo de caso (`--inicio`) | RF08, RNF04 | Pesquisadores |
 | Descarte do vídeo bruto e prazo de guarda | RNF06, RNF11 | Pesquisadores, gestão |
 | Controle de acesso e criptografia | RNF06 | Analistas, gestão |
 | Termo de consentimento LGPD | RNF11 | Pesquisadores, gestão |

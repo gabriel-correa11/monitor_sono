@@ -108,6 +108,10 @@ Ficam em `src/monitor_sono/config.py`.
 
 ## Limitações
 
+- **A gravação 1 tem um buraco:** a câmera marca 3h51 de noite (03:22:48 a 07:14:21), mas o vídeo tem 2h39. Cerca
+  de 1h15 não foi gravada, provavelmente perto dos 5 minutos de vídeo, onde o sistema detectou uma troca brusca de
+  toda a imagem. Os horários da gravação 1 depois desse ponto ficam adiantados em relação à câmera. Além disso, os
+  dois arquivos marcam o tempo cerca de 2,5% mais devagar que o relógio da câmera.
 - **Rosto, olhos, cabeça e presença (RF03 a RF06) não foram implementados.** O OpenCV 5, usado no projeto, não
   traz mais detector de rosto pronto. Implementar exige um modelo à parte ou uma biblioteca nova, o que depende de
   decisão da equipe.
