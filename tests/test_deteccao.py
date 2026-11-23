@@ -4,7 +4,7 @@ presença (RF03), com quadros gerados em código."""
 import numpy as np
 
 from monitor_sono import config
-from monitor_sono.deteccao import movimento, rosto, visibilidade
+from monitor_sono.deteccao import movimento, olhos, rosto, visibilidade
 from monitor_sono.tipos import Rosto
 
 
@@ -93,15 +93,15 @@ def usar_cascatas(monkeypatch, frontal=(), perfil=()) -> dict[str, CascataFalsa]
         "haarcascade_frontalface_default.xml": CascataFalsa(list(frontal)),
         "haarcascade_profileface.xml": CascataFalsa(list(perfil)),
     }
-    monkeypatch.setattr(rosto, "_cascata", lambda nome: falsas[nome])
+    monkeypatch.setattr(rosto, "cascata", lambda nome: falsas[nome])
     return falsas
 
 
 def test_cascatas_reais_estao_disponiveis():
     # RF04: o projeto exige OpenCV 4.x, que traz as cascatas Haar em cv2.data.haarcascades.
-    assert not rosto._cascata("haarcascade_frontalface_default.xml").empty()
-    assert not rosto._cascata("haarcascade_profileface.xml").empty()
-    assert not rosto._cascata("haarcascade_eye.xml").empty()
+    assert not rosto.cascata("haarcascade_frontalface_default.xml").empty()
+    assert not rosto.cascata("haarcascade_profileface.xml").empty()
+    assert not rosto.cascata("haarcascade_eye.xml").empty()
 
 
 def test_imagem_sem_rosto_devolve_none():
@@ -138,3 +138,97 @@ def test_mesmo_rosto_perto_e_de_tamanho_parecido():
     assert rosto.mesmo_rosto(a, Rosto(150, 110, 130, 130, True))
     assert not rosto.mesmo_rosto(a, Rosto(500, 100, 120, 120, True))  # longe
     assert not rosto.mesmo_rosto(a, Rosto(100, 100, 300, 300, True))  # tamanho muito diferente
+
+
+# ---------------------------------------------------------------- RF05 — olhos (RN06)
+# O detector de olhos é simulado: a sequência diz quantos olhos "aparecem" em cada quadro.
+
+ROSTO_GRANDE = Rosto(100, 100, 200, 200, frontal=True)
+ROSTO_PEQUENO = Rosto(100, 100, 100, 100, frontal=True)
+ROSTO_PERFIL = Rosto(100, 100, 200, 200, frontal=False)
+
+
+def quadro_com_textura() -> np.ndarray:
+    """Quadro com bastante contraste, para o rosto ser considerado nítido."""
+    return np.random.default_rng(2).integers(0, 256, size=(480, 640), dtype=np.uint8)
+
+
+def simular_olhos(monkeypatch, contagens: list[int]) -> None:
+    fila = iter(contagens)
+    monkeypatch.setattr(olhos, "contar_olhos", lambda quadro, rosto: next(fila))
+
+
+def acompanhar(rostos: list[Rosto | None]) -> list[str]:
+    q = quadro_com_textura()
+    acompanhamento = olhos.AcompanhamentoOlhos()
+    return [acompanhamento.avaliar(q, r, float(i)).estado for i, r in enumerate(rostos)]
+
+
+def test_sem_rosto_olhos_indeterminados():
+    # RN06: sem rosto, nunca "fechados".
+    assert olhos.detectar_estado_olhos(quadro_com_textura(), None, 1.0).estado == "indeterminado"
+    assert acompanhar([None] * 10) == ["indeterminado"] * 10
+
+
+def test_rosto_pequeno_sem_olhos_e_indeterminado_nao_fechados(monkeypatch):
+    simular_olhos(monkeypatch, [1] * 3 + [0] * 10)
+    assert acompanhar([ROSTO_PEQUENO] * 13) == ["indeterminado"] * 13
+
+
+def test_rosto_de_perfil_e_indeterminado(monkeypatch):
+    simular_olhos(monkeypatch, [2] * 10)
+    assert acompanhar([ROSTO_PERFIL] * 10) == ["indeterminado"] * 10
+
+
+def test_rosto_borrado_e_indeterminado(monkeypatch):
+    simular_olhos(monkeypatch, [2])
+    plano = np.full((480, 640), 128, dtype=np.uint8)
+    assert olhos.detectar_estado_olhos(plano, ROSTO_GRANDE, 1.0).estado == "indeterminado"
+
+
+def test_rosto_grande_com_olhos_e_abertos(monkeypatch):
+    simular_olhos(monkeypatch, [2])
+    assert olhos.detectar_estado_olhos(quadro_com_textura(), ROSTO_GRANDE, 1.0).estado == "abertos"
+
+
+def test_um_quadro_sozinho_nunca_da_fechados(monkeypatch):
+    simular_olhos(monkeypatch, [0])
+    assert olhos.detectar_estado_olhos(quadro_com_textura(), ROSTO_GRANDE, 1.0).estado == "indeterminado"
+
+
+def test_olhos_vistos_e_depois_sumidos_viram_fechados(monkeypatch):
+    n = config.QUADROS_OLHOS_FECHADOS
+    simular_olhos(monkeypatch, [2] * 3 + [0] * (n + 2))
+    estados = acompanhar([ROSTO_GRANDE] * (3 + n + 2))
+    assert estados[:3] == ["abertos"] * 3
+    assert estados[3:3 + n - 1] == ["indeterminado"] * (n - 1)  # ainda não são quadros seguidos suficientes
+    assert estados[3 + n - 1:] == ["fechados"] * 3
+
+
+def test_sem_olhos_vistos_antes_nunca_fechados(monkeypatch):
+    # RN06: rosto em que os olhos nunca apareceram pode ser imagem ruim, não olho fechado.
+    simular_olhos(monkeypatch, [0] * 20)
+    assert acompanhar([ROSTO_GRANDE] * 20) == ["indeterminado"] * 20
+
+
+def test_rosto_sumido_dentro_da_folga_mantem_acompanhamento(monkeypatch):
+    folga, n = config.FOLGA_ROSTO_QUADROS, config.QUADROS_OLHOS_FECHADOS
+    simular_olhos(monkeypatch, [2] + [0] * n)
+    estados = acompanhar([ROSTO_GRANDE] + [None] * folga + [ROSTO_GRANDE] * n)
+    assert estados[-1] == "fechados"
+
+
+def test_rosto_sumido_alem_da_folga_reinicia_acompanhamento(monkeypatch):
+    # Limitação registrada: depois de reiniciar, "fechados" só volta com olhos vistos abertos de novo.
+    folga, n = config.FOLGA_ROSTO_QUADROS, config.QUADROS_OLHOS_FECHADOS
+    simular_olhos(monkeypatch, [2] + [0] * (n + 3))
+    estados = acompanhar([ROSTO_GRANDE] + [None] * (folga + 1) + [ROSTO_GRANDE] * (n + 3))
+    assert "fechados" not in estados
+
+
+def test_outro_rosto_reinicia_acompanhamento(monkeypatch):
+    n = config.QUADROS_OLHOS_FECHADOS
+    longe = Rosto(400, 250, 200, 200, frontal=True)
+    simular_olhos(monkeypatch, [2] + [0] * (n + 2))
+    estados = acompanhar([ROSTO_GRANDE] + [longe] * (n + 2))
+    assert "fechados" not in estados

@@ -31,6 +31,7 @@ RESOLUCAO_ROSTO: int = 960  # largura (px) da cópia reduzida em que o rosto é 
 FATOR_ESCALA_ROSTO: float = 1.2  # PROVISÓRIO: passo entre os tamanhos testados pela cascata (maior = mais rápido, menos preciso)
 VIZINHOS_ROSTO: int = 5  # PROVISÓRIO: detecções vizinhas exigidas para aceitar um rosto (maior = menos falso positivo)
 TAMANHO_BUSCA_ROSTO: int = 60  # PROVISÓRIO: menor largura de rosto procurada, em px da imagem original
+TAMANHO_MINIMO_HAAR: int = 24  # menor janela que as cascatas do OpenCV aceitam (são treinadas em 20 a 24 px)
 MARGEM_BUSCA_ROSTO: float = 1.0  # janela ao redor do último rosto: margem de 1 largura do rosto para cada lado
 DISTANCIA_MESMO_ROSTO: float = 1.0  # PROVISÓRIO: centros a até 1 largura de rosto = mesmo rosto acompanhado
 
@@ -39,6 +40,9 @@ TAMANHO_MINIMO_ROSTO: int = 120  # PROVISÓRIO: largura mínima do rosto (px da 
 CONTRASTE_MINIMO_ROSTO: float = 20.0  # PROVISÓRIO: desvio padrão mínimo da região do rosto (rosto borrado não serve)
 LARGURA_RECORTE_OLHOS: int = 240  # largura (px) para a qual o recorte do rosto é ajustado antes de procurar os olhos
 VIZINHOS_OLHOS: int = 5  # PROVISÓRIO: detecções vizinhas exigidas para aceitar um olho
+FATOR_ESCALA_OLHOS: float = 1.1  # PROVISÓRIO: passo entre os tamanhos testados pela cascata de olhos
+TAMANHO_MINIMO_OLHO: int = 30  # PROVISÓRIO: menor olho procurado, em px do recorte (cerca de 1/8 da largura do rosto)
+ALTURA_REGIAO_OLHOS: float = 0.6  # fração de cima do rosto em que os olhos são procurados
 FOLGA_ROSTO_QUADROS: int = 3  # PROVISÓRIO: quadros seguidos sem rosto que o acompanhamento tolera antes de reiniciar
 QUADROS_OLHOS_FECHADOS: int = 5  # PROVISÓRIO: quadros seguidos sem olhos, num rosto em que já foram vistos, para "fechados"
 

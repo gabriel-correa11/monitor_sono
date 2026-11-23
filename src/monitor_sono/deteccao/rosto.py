@@ -14,16 +14,14 @@ import numpy as np
 from monitor_sono import config
 from monitor_sono.tipos import Rosto
 
-_TAMANHO_MINIMO_HAAR = 24  # menor janela das cascatas do OpenCV (são treinadas em 20 a 24 px)
-
 
 @cache
-def _cascata(nome: str) -> cv2.CascadeClassifier:
-    """Carrega uma cascata de cv2.data.haarcascades uma única vez."""
-    cascata = cv2.CascadeClassifier(cv2.data.haarcascades + nome)
-    if cascata.empty():
+def cascata(nome: str) -> cv2.CascadeClassifier:
+    """RF04, RF05. Carrega uma cascata de cv2.data.haarcascades uma única vez."""
+    classificador = cv2.CascadeClassifier(cv2.data.haarcascades + nome)
+    if classificador.empty():
         raise RuntimeError(f"RF04: cascata {nome} não encontrada; o projeto exige OpenCV 4.x")
-    return cascata
+    return classificador
 
 
 def cinza(quadro: np.ndarray) -> np.ndarray:
@@ -59,11 +57,11 @@ def _procurar(imagem: np.ndarray, minimo: int) -> list[tuple[int, int, int, int,
         "minNeighbors": config.VIZINHOS_ROSTO,
         "minSize": (minimo, minimo),
     }
-    frontais = _cascata("haarcascade_frontalface_default.xml").detectMultiScale(imagem, **parametros)
+    frontais = cascata("haarcascade_frontalface_default.xml").detectMultiScale(imagem, **parametros)
     if len(frontais):
         return [(int(x), int(y), int(w), int(h), True) for x, y, w, h in frontais]
 
-    perfil = _cascata("haarcascade_profileface.xml")
+    perfil = cascata("haarcascade_profileface.xml")
     achados = [(int(x), int(y), int(w), int(h), False) for x, y, w, h in perfil.detectMultiScale(imagem, **parametros)]
     largura = imagem.shape[1]
     espelhada = cv2.flip(imagem, 1)  # a cascata de perfil só olha para um lado
@@ -88,7 +86,7 @@ def detectar_rosto(quadro: np.ndarray, anterior: Rosto | None = None) -> Rosto |
         if escala < 1.0 else original
     )
     reduzida = cv2.equalizeHist(reduzida)
-    minimo = max(_TAMANHO_MINIMO_HAAR, round(config.TAMANHO_BUSCA_ROSTO * escala))
+    minimo = max(config.TAMANHO_MINIMO_HAAR, round(config.TAMANHO_BUSCA_ROSTO * escala))
 
     achados: list[tuple[int, int, int, int, bool]] = []
     if anterior is not None:
