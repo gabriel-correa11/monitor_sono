@@ -201,11 +201,3 @@ Filmar uma pessoa dormindo e gerar informação sobre a saúde dela envolve **da
 - a pasta `dados/` está no `.gitignore` e nunca é enviada ao repositório;
 - endereços de câmera com usuário e senha (RTSP) não podem ficar escritos no código.
 
-## 8. Pendências
-
-- Confirmar os limiares e tempos provisórios de `config.py` com um gabarito das gravações (RF03 a RF07,
-  RF09 a RF11, RN01–RN05) — pesquisadores e analistas.
-- Confirmar os estados provisórios: vigília, possível sono e indeterminado (RF10, RN07) — pesquisadores e
-  gestão.
-- Rever a regra de "olhos fechados" com um gabarito (RF05, RN02, RN06) — pesquisadores e analistas.
-- Controle de acesso e termo de consentimento (RNF06, RNF11) — pesquisadores e gestão.
