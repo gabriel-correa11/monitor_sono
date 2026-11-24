@@ -1,6 +1,8 @@
 """RF08, RF12, RNF04, RNF05, RNF09, RNF10 — Banco SQLite local."""
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -43,9 +45,20 @@ def conectar(caminho: Path | None = None) -> sqlite3.Connection:
     return conexao
 
 
+@contextmanager
+def _transacao(caminho: Path | None = None) -> Iterator[sqlite3.Connection]:
+    """RNF05. Abre o banco, faz commit (ou desfaz, se houver erro) e sempre fecha a conexão.
+
+    O `with` de uma conexão do sqlite3 só faz commit e deixa a conexão aberta, o que no Windows pode
+    manter o arquivo do banco preso.
+    """
+    with closing(conectar(caminho)) as conexao, conexao:
+        yield conexao
+
+
 def criar_sessao(inicio: datetime, caminho: Path | None = None) -> int:
     """RF01. Cria sessão e devolve o id. RNF04."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         cur = c.execute(
             "INSERT INTO sessoes (inicio) VALUES (?)",
             (inicio.isoformat(timespec="seconds"),),
@@ -55,7 +68,7 @@ def criar_sessao(inicio: datetime, caminho: Path | None = None) -> int:
 
 def finalizar_sessao(sessao_id: int, fim: datetime, caminho: Path | None = None) -> None:
     """RF01. Registra o fim da sessão. RNF04."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         c.execute(
             "UPDATE sessoes SET fim = ? WHERE id = ?",
             (fim.isoformat(timespec="seconds"), sessao_id),
@@ -64,7 +77,7 @@ def finalizar_sessao(sessao_id: int, fim: datetime, caminho: Path | None = None)
 
 def excluir_sessao(sessao_id: int, caminho: Path | None = None) -> None:
     """RNF10. Exclui sessão e todos os registros associados (CASCADE). RNF05."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         c.execute("DELETE FROM sessoes WHERE id = ?", (sessao_id,))
 
 
@@ -78,7 +91,7 @@ def registrar_comportamento(
     """RF08, RF09, RF12. Registra um comportamento observado. RNF04."""
     if tipo not in config.COMPORTAMENTOS:
         raise ValueError(f"Comportamento fora do escopo: {tipo}")
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         cur = c.execute(
             "INSERT INTO comportamentos (sessao_id, tipo, inicio, fim) VALUES (?, ?, ?, ?)",
             (
@@ -99,8 +112,10 @@ def registrar_estado(
     confiavel: bool = True,
     caminho: Path | None = None,
 ) -> int:
-    """RF10, RF12. Registra um estado estimado. RNF04, RNF09."""
-    with conectar(caminho) as c:
+    """RF10, RF12. Registra um estado estimado. RNF04, RNF09. Só aceita estados de config.ESTADOS."""
+    if estado not in config.ESTADOS:
+        raise ValueError(f"Estado fora do escopo: {estado}")
+    with _transacao(caminho) as c:
         cur = c.execute(
             "INSERT INTO estados (sessao_id, estado, inicio, fim, confiavel) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -117,13 +132,13 @@ def registrar_estado(
 
 def listar_sessoes(caminho: Path | None = None) -> list[sqlite3.Row]:
     """RF14, RNF10. Lista sessões em ordem decrescente."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         return c.execute("SELECT * FROM sessoes ORDER BY inicio DESC").fetchall()
 
 
 def comportamentos_da_sessao(sessao_id: int, caminho: Path | None = None) -> list[sqlite3.Row]:
     """RF13, RF14. Comportamentos de uma sessão em ordem cronológica."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         return c.execute(
             "SELECT * FROM comportamentos WHERE sessao_id = ? ORDER BY inicio",
             (sessao_id,),
@@ -132,7 +147,7 @@ def comportamentos_da_sessao(sessao_id: int, caminho: Path | None = None) -> lis
 
 def estados_da_sessao(sessao_id: int, caminho: Path | None = None) -> list[sqlite3.Row]:
     """RF13, RF14. Estados estimados de uma sessão em ordem cronológica."""
-    with conectar(caminho) as c:
+    with _transacao(caminho) as c:
         return c.execute(
             "SELECT * FROM estados WHERE sessao_id = ? ORDER BY inicio",
             (sessao_id,),

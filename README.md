@@ -49,22 +49,24 @@ status em [`docs/rastreabilidade.md`](docs/rastreabilidade.md).
 
 ## 3. Situação atual
 
-A base do projeto está montada, com as pastas e as partes principais preparadas para receber o código.
-Ela ainda não processa imagens da câmera.
+O sistema funciona de ponta a ponta: lê a câmera ou uma gravação, detecta comportamentos, estima estados,
+grava no banco e mostra no dashboard.
 
 | Parte | Situação |
 |---|---|
 | Pastas, pacote Python e instalação | Pronto |
+| Captura de vídeo (câmera ao vivo ou gravação) | Funcionando e testado |
+| Detecção de movimento, mudança de posição e visibilidade | Funcionando e testado |
+| Detecção de rosto, olhos, cabeça e presença | Funcionando e testado (cascatas Haar do OpenCV 4.x) |
+| Classificação (comportamentos, períodos e estados) | Funcionando e testado |
+| Pipeline e linha de comando (`analisar`) | Funcionando e testado |
 | Banco de dados (sessões, comportamentos e estados) | Funcionando e testado |
-| Controle de sessão (iniciar e encerrar) | Funcionando sobre o banco |
-| Linha de comando | Funcionando (`--help`) |
-| Dashboard | Esqueleto com seções e aviso de não diagnóstico |
-| Captura de vídeo (câmera em tempo real) | Assinatura definida |
-| Detecção (presença, rosto, olhos, cabeça, corpo, visibilidade) | Assinatura definida |
-| Classificação (comportamentos, estados, períodos) | Assinatura definida |
+| Dashboard (linha do tempo, relatório em CSV, avisos, exclusão) | Funcionando (verificação manual) |
 
-Funções ainda não implementadas lançam `NotImplementedError` com o requisito. Assim, fica claro no
-próprio código o que falta.
+Os limiares e tempos de `config.py` são **provisórios**: ainda precisam ser confirmados com um gabarito das
+gravações. Os resultados do estudo de caso e as limitações estão em
+[`docs/material-documentacao.md`](docs/material-documentacao.md). A situação de cada requisito está em
+[`docs/rastreabilidade.md`](docs/rastreabilidade.md).
 
 ## 4. Estrutura do projeto
 
@@ -78,14 +80,21 @@ monitor_sono/
 ├── agents-context/              Histórico do que a IA fez
 ├── docs/
 │   ├── requisitos.md            Lista de requisitos (RF, RNF, RN)
-│   └── rastreabilidade.md       Requisito → arquivo → função → status
+│   ├── rastreabilidade.md       Requisito → arquivo → função → status
+│   └── material-documentacao.md Uso, resultados do estudo de caso, parâmetros e limitações
 ├── tests/
-│   └── test_registro.py         Testes do banco (RF01, RF08, RF12, RNF10)
+│   ├── test_captura.py          Testes da captura (RF02, RNF08)
+│   ├── test_deteccao.py         Testes da detecção (RF03 a RF07, RF15)
+│   ├── test_classificacao.py    Testes da classificação (RF09 a RF11, RN01 a RN07)
+│   ├── test_pipeline.py         Teste de ponta a ponta com vídeo sintético
+│   └── test_registro.py         Testes do banco (RF01, RF08, RF12, RNF05, RNF10)
 └── src/
     └── monitor_sono/
         ├── __init__.py          Versão do pacote
-        ├── __main__.py          Linha de comando
+        ├── __main__.py          Linha de comando (python -m monitor_sono analisar)
         ├── config.py            Caminhos, parâmetros e aviso de não diagnóstico
+        ├── tipos.py             Formatos dos dados trocados entre os módulos
+        ├── pipeline.py          Liga captura → detecção → classificação → registro
         ├── sessao/              RF01         iniciar e encerrar sessão
         ├── captura/
         │   └── video.py         RF02         capturar imagens em tempo real
@@ -124,7 +133,7 @@ Cada pasta corresponde a uma etapa do fluxo. Isso permite que os analistas traba
 | Ferramenta | Uso | Licença |
 |---|---|---|
 | Python 3.11+ | Linguagem | PSF |
-| OpenCV | Captura de vídeo e visão computacional | Apache 2.0 |
+| OpenCV 4.x | Captura de vídeo e visão computacional (o 5.x não traz as cascatas Haar de rosto e olhos) | Apache 2.0 |
 | SQLite | Banco local em um único arquivo, sem servidor | Domínio público |
 | Streamlit | Dashboard | Apache 2.0 |
 | pandas | Organização dos dados para o dashboard | BSD |
@@ -138,11 +147,19 @@ registrado nas decisões.
 
 Requisito: Python 3.11 ou mais novo.
 
-**Windows**
+**Windows (PowerShell)**
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
+pip install -e .
+```
+
+**Windows (Git Bash)**
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate
 pip install -e .
 ```
 
@@ -157,13 +174,22 @@ pip install -e .
 A instalação precisa ser **editável** (`-e`). O `config.py` localiza a pasta `dados/` a partir do local
 do código-fonte, e uma instalação normal colocaria o pacote em outro lugar.
 
+Quem já tinha o `.venv` com o OpenCV 5 precisa rodar `pip install -e .` de novo: o projeto agora exige
+`opencv-python>=4.9,<5`.
+
 Depois de instalado:
 
 ```bash
 pytest                                              # roda os testes
-python -m monitor_sono --help                       # confere a linha de comando
+python -m monitor_sono analisar 0 --autorizado      # câmera ao vivo; Ctrl+C encerra a sessão
+python -m monitor_sono analisar "caminho/da/gravacao.mp4" --inicio "2026-11-20 22:30" --autorizado
 streamlit run src/monitor_sono/dashboard/app.py     # abre o dashboard no navegador
 ```
+
+- `--autorizado` confirma que a pessoa monitorada assinou o termo de consentimento (RNF11). Sem ele, o
+  comando não roda.
+- `--inicio` é a data e hora real em que a gravação começou. Sem ele, usa o momento da análise.
+- Análise e dashboard rodam em processos separados: o dashboard só lê o banco.
 
 ## 7. Privacidade e LGPD
 
@@ -177,7 +203,9 @@ Filmar uma pessoa dormindo e gerar informação sobre a saúde dela envolve **da
 
 ## 8. Pendências
 
-- Limiares e critérios de classificação (RF09, RN01–RN05) — equipe decide.
-- Lista confirmada de estados comportamentais válidos (RF10, RN07) — pesquisadores decidem.
-- Módulo pipeline que liga captura → detecção → classificação → registro — equipe decide.
+- Confirmar os limiares e tempos provisórios de `config.py` com um gabarito das gravações (RF03 a RF07,
+  RF09 a RF11, RN01–RN05) — pesquisadores e analistas.
+- Confirmar os estados provisórios: vigília, possível sono e indeterminado (RF10, RN07) — pesquisadores e
+  gestão.
+- Rever a regra de "olhos fechados" com um gabarito (RF05, RN02, RN06) — pesquisadores e analistas.
 - Controle de acesso e termo de consentimento (RNF06, RNF11) — pesquisadores e gestão.

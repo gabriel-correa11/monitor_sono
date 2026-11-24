@@ -144,6 +144,8 @@ responsabilidade cada, que conversam só por funções públicas.
 | `src/monitor_sono/sessao/` | Abre e encerra sessões | Analista de dados |
 | `src/monitor_sono/dashboard/` | Telas de resultado | Analista de telas |
 | `src/monitor_sono/config.py` | Caminhos, parâmetros e aviso de não diagnóstico | Todos (mudança combinada) |
+| `src/monitor_sono/tipos.py` | Contratos: formatos dos dados entre detecção, classificação e registro | Todos (mudança combinada) |
+| `src/monitor_sono/pipeline.py` | Liga captura → detecção → classificação → registro (`python -m monitor_sono analisar`) | Analistas |
 | `tests/` | Testes automatizados | Todos |
 | `docs/` | Documentação, requisitos e rastreabilidade | Analistas e documentadores |
 | `agents-context/` | Histórico do que a IA fez | IA (só cria arquivos novos) |
@@ -153,17 +155,18 @@ responsabilidade cada, que conversam só por funções públicas.
 | Módulo | Pode importar | Não pode importar |
 |---|---|---|
 | `captura` | `config` | qualquer outro módulo do projeto |
-| `deteccao` | `config` | `captura`, `classificacao`, `registro`, `dashboard` |
-| `classificacao` | `config` | `captura`, `deteccao`, `registro`, `dashboard` |
+| `deteccao` | `config`, `tipos` | `captura`, `classificacao`, `registro`, `dashboard` |
+| `classificacao` | `config`, `tipos` | `captura`, `deteccao`, `registro`, `dashboard` |
 | `registro` | `config` | `captura`, `deteccao`, `classificacao`, `dashboard` |
 | `sessao` | `config`, `registro` | `captura`, `deteccao`, `classificacao`, `dashboard` |
-| `dashboard` | `config`, `registro` | `captura`, `deteccao`, `classificacao`; também não abre o banco direto |
+| `dashboard` | `config`, `registro` | `captura`, `deteccao`, `classificacao`, `pipeline`; também não abre o banco direto |
+| `pipeline` | todos os módulos acima, menos `dashboard` | `dashboard` |
 
 - A detecção recebe os quadros como parâmetro, então pode ser testada sem câmera.
 - A classificação recebe listas de comportamentos, não quadros.
 - O dashboard só lê pelo `registro`. Se o banco mudar, as telas continuam funcionando.
 - O formato que um módulo entrega ao outro é um **contrato**: só muda com aviso a quem usa.
-- A ligação entre captura, detecção, classificação e registro (pipeline) ainda não tem módulo definido. A equipe decide.
+- O `pipeline.py` é o único módulo que liga captura, detecção, classificação e registro. Ele roda em processo próprio, separado do dashboard.
 
 ## 6. Código e testes
 
