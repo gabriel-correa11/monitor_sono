@@ -190,7 +190,10 @@ streamlit run src/monitor_sono/dashboard/app.py     # abre o dashboard no navega
 
 - `--autorizado` confirma que a pessoa monitorada assinou o termo de consentimento (RNF11). Sem ele, o
   comando não roda.
-- `--inicio` é a data e hora real em que a gravação começou. Sem ele, usa o momento da análise.
+- Os horários vêm da data e hora que a câmera grava no canto da imagem (lidas em cada quadro). Isso corrige
+  o relógio do vídeo e marca como "câmera sem visão" os trechos em que a câmera parou de gravar.
+- `--inicio` só é usado quando a câmera não grava data e hora legíveis na imagem. Sem ele, usa o momento da
+  análise.
 - Análise e dashboard rodam em processos separados: o dashboard só lê o banco.
 
 ## 7. Privacidade e LGPD

@@ -15,6 +15,7 @@ from pathlib import Path
 import cv2
 
 from monitor_sono import config
+from monitor_sono.captura.carimbo import RelogioCarimbo, ler_carimbo
 from monitor_sono.captura.video import capturar_quadros
 from monitor_sono.classificacao.comportamentos import classificar_comportamentos
 from monitor_sono.classificacao.estados import estimar_estados
@@ -40,6 +41,9 @@ class Resultado:
     estados: list[EstadoEstimado] = field(default_factory=list)
     quadros_com_rosto: int = 0  # RF04
     quadros_olhos_determinaveis: int = 0  # RF05: olhos "abertos" ou "fechados"
+    horario_do_carimbo: bool = False  # RNF04: horários tirados do carimbo da câmera
+    quadros_ignorados: int = 0  # trechos repetidos pela câmera ou carimbo em dúvida
+    interrupcoes: int = 0  # trechos sem gravação (mais de config.LACUNA_GRAVACAO_S sem quadros)
 
 
 def analisar(
@@ -50,27 +54,42 @@ def analisar(
 ) -> Resultado:
     """RF01 a RF12, RF15. Analisa uma câmera ou gravação e grava a sessão no banco.
 
-    - inicio: data e hora real do início da gravação. Os eventos são gravados como inicio + segundo do
-      quadro (RNF04). Sem valor, usa o momento atual.
+    - Horários (RNF04): quando a câmera grava a data e hora na imagem, cada quadro recebe o horário do
+      carimbo (captura/carimbo.py), o que corrige o relógio do vídeo e marca as interrupções da gravação.
+      Sem carimbo legível, os eventos são gravados como inicio + segundo do vídeo; sem `inicio`, usa o
+      momento atual.
     - Com câmera, a análise termina com Ctrl+C; o que foi capturado até ali é classificado e gravado.
-    - Se a captura falhar (ex.: fonte que não abre), a sessão criada é excluída e o erro é repassado.
+    - A sessão só é criada no banco depois da captura: se a fonte não abrir, nada fica gravado.
     """
-    inicio = (inicio or datetime.now()).replace(microsecond=0)
-    sessao_id = banco.criar_sessao(inicio, caminho_banco)
+    inicio_padrao = inicio or datetime.now()
 
     movimentos: list[DeteccaoMovimento] = []
     visibilidades: list[Visibilidade] = []
     olhos: list[EstadoOlhos] = []
     segundos_cabeca: list[float] = []
+    relogio = RelogioCarimbo()
     acompanha_olhos = AcompanhamentoOlhos()
     acompanha_cabeca = AcompanhamentoCabeca()
     acompanha_presenca = AcompanhamentoPresenca()
     anterior = None
     rosto_anterior: Rosto | None = None
-    ultimo = 0.0
-    quadros = quadros_com_rosto = 0
+    ultimo: float | None = None
+    quadros = quadros_com_rosto = ignorados = interrupcoes = 0
     try:
-        for segundo, original in capturar_quadros(fonte, config.QUADROS_POR_SEGUNDO_ANALISE, resolucao=None):
+        for segundo_video, original in capturar_quadros(
+            fonte, config.QUADROS_POR_SEGUNDO_ANALISE, resolucao=None
+        ):
+            segundo = relogio.atualizar(segundo_video, ler_carimbo(original))  # RNF04
+            if segundo is None:
+                ignorados += 1
+                continue
+            if ultimo is not None and segundo - ultimo > config.LACUNA_GRAVACAO_S:
+                # Gravação interrompida: não comparar com o quadro de antes nem seguir o mesmo rosto.
+                interrupcoes += 1
+                anterior, rosto_anterior = None, None
+                acompanha_olhos, acompanha_cabeca = AcompanhamentoOlhos(), AcompanhamentoCabeca()
+                acompanha_presenca = AcompanhamentoPresenca()
+
             quadro = cv2.resize(original, config.RESOLUCAO_ANALISE)  # RF07, RF15: mesma redução de antes
             movimento = analisar_movimento(anterior, quadro, segundo) if anterior is not None else None
             if movimento is not None:
@@ -93,20 +112,19 @@ def analisar(
                 ao_progredir(segundo)
     except KeyboardInterrupt:
         pass
-    except Exception:
-        # RF01: a análise falhou antes de gravar qualquer resultado (ex.: fonte que não abre). A sessão
-        # vazia é desfeita para não ficar no banco sem horário de encerramento.
-        banco.excluir_sessao(sessao_id, caminho_banco)
-        raise
 
+    ultimo = ultimo or 0.0
     comportamentos = classificar_comportamentos(movimentos, visibilidades, olhos)
     comportamentos += juntar_segundos(segundos_cabeca, "movimento_cabeca", config.JUNCAO_MOVIMENTO_S)  # RF06
     comportamentos.sort(key=lambda i: (i.inicio, i.tipo))
     estados = estimar_estados(olhos, comportamentos, 0.0, ultimo)
 
-    def hora(segundos: float) -> datetime:
-        return inicio + timedelta(seconds=round(segundos))
+    origem = relogio.origem or inicio_padrao  # RNF04: o carimbo da câmera tem prioridade
 
+    def hora(segundos: float) -> datetime:
+        return origem + timedelta(seconds=segundos)
+
+    sessao_id = banco.criar_sessao(origem, caminho_banco)  # RF01
     for c in comportamentos:
         banco.registrar_comportamento(sessao_id, c.tipo, hora(c.inicio), hora(c.fim), caminho_banco)
     for e in estados:
@@ -114,4 +132,7 @@ def analisar(
     banco.finalizar_sessao(sessao_id, hora(ultimo), caminho_banco)
 
     determinaveis = sum(o.estado in ("abertos", "fechados") for o in olhos)
-    return Resultado(sessao_id, ultimo, quadros, comportamentos, estados, quadros_com_rosto, determinaveis)
+    return Resultado(
+        sessao_id, ultimo, quadros, comportamentos, estados, quadros_com_rosto, determinaveis,
+        relogio.origem is not None, ignorados, interrupcoes,
+    )

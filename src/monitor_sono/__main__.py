@@ -46,6 +46,14 @@ def _analisar(args: argparse.Namespace) -> None:
     for e in r.estados:
         tempo_estado[e.estado] += e.fim - e.inicio
     print(f"\n\nSessão {r.sessao_id} gravada: {r.duracao_s / 60:.0f} min, {r.quadros} quadros analisados.")
+    if r.horario_do_carimbo:
+        print("  horários: data e hora gravadas pela câmera na imagem (--inicio não foi usado)")
+    else:
+        print("  horários: --inicio + tempo do vídeo (a câmera não gravou data e hora legíveis na imagem)")
+    if r.interrupcoes:
+        print(f"  interrupções da gravação: {r.interrupcoes} (marcadas como câmera sem visão)")
+    if r.quadros_ignorados:
+        print(f"  quadros ignorados: {r.quadros_ignorados} (trechos repetidos pela câmera ou carimbo em dúvida)")
     for tipo, qtd in sorted(tipos.items()):
         print(f"  {tipo}: {qtd}")
     for estado, seg in tempo_estado.items():
@@ -61,7 +69,8 @@ def main() -> None:
 
     p = sub.add_parser("analisar", help="analisa uma câmera ou gravação e grava a sessão no banco")
     p.add_argument("fonte", help="índice da câmera (ex.: 0) ou caminho da gravação")
-    p.add_argument("--inicio", type=_data_hora, help='data e hora real do início da gravação, ex.: "2026-11-20 22:30"')
+    p.add_argument("--inicio", type=_data_hora, help='data e hora real do início da gravação, ex.: "2026-11-20 22:30". '
+                        "Só é usado se a câmera não gravar a data e hora na imagem")
     p.add_argument("--autorizado", action="store_true",
                    help="confirma que a pessoa monitorada autorizou o tratamento das imagens (RNF11)")
     p.set_defaults(funcao=_analisar)
