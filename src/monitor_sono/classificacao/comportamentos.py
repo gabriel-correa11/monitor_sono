@@ -22,6 +22,20 @@ def periodos_maior_atividade(movimentos: list[DeteccaoMovimento]) -> list[Interv
     return juntar_segundos(marcados, "maior_atividade_motora", config.JUNCAO_MOVIMENTO_S)
 
 
+def lacunas_gravacao(visibilidades: list[Visibilidade]) -> list[Intervalo]:
+    """RF15, RN07. Trechos sem nenhum quadro (gravação interrompida) viram visibilidade insuficiente.
+
+    Há uma avaliação de visibilidade por quadro analisado; um intervalo maior que config.LACUNA_GRAVACAO_S
+    entre duas delas é um trecho em que a câmera não observou nada.
+    """
+    segundos = sorted(v.segundo for v in visibilidades)
+    return [
+        Intervalo("visibilidade_insuficiente", a, b)
+        for a, b in zip(segundos, segundos[1:])
+        if b - a > config.LACUNA_GRAVACAO_S
+    ]
+
+
 def classificar_comportamentos(
     movimentos: list[DeteccaoMovimento],
     visibilidades: list[Visibilidade],
@@ -32,7 +46,8 @@ def classificar_comportamentos(
     - movimento_corporal e ausencia_movimento: períodos do RF11;
     - mudanca_posicao: cada mudança brusca de posição (RN05);
     - maior_atividade_motora: movimentos frequentes (RN04);
-    - visibilidade_insuficiente: trechos em que a câmera não observa a cena (RF15);
+    - visibilidade_insuficiente: trechos em que a câmera não observa a cena, incluindo interrupções da
+      gravação (RF15);
     - olhos_abertos e olhos_fechados: trechos com o mesmo estado dos olhos (RF05), quando houver essa detecção.
     """
     intervalos = identificar_periodos(movimentos, visibilidades)
@@ -45,6 +60,7 @@ def classificar_comportamentos(
         "visibilidade_insuficiente",
         config.JUNCAO_MOVIMENTO_S,
     )
+    intervalos += lacunas_gravacao(visibilidades)
     for estado, tipo in (("abertos", "olhos_abertos"), ("fechados", "olhos_fechados")):
         intervalos += juntar_segundos(
             [o.segundo for o in (olhos or []) if o.estado == estado], tipo, config.JUNCAO_MOVIMENTO_S

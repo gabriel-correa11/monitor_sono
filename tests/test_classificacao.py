@@ -134,3 +134,24 @@ def test_estados_cobrem_a_sessao_inteira():
     assert e[0].inicio == 0 and e[-1].fim == 1000
     assert all(a.fim == b.inicio for a, b in zip(e, e[1:]))
     assert {x.estado for x in e} <= set(config.ESTADOS)
+
+
+# --- RN07: interrupção da gravação --------------------------------------------------------------------
+
+def test_interrupcao_da_gravacao_quebra_a_ausencia_de_movimento():
+    fim = int(config.AUSENCIA_MINIMA_S) + 30
+    volta = fim + 3600  # uma hora sem nenhum quadro
+    dets = parado(0, fim) + parado(volta, volta + fim)
+    aus = [p for p in periodos.identificar_periodos(dets, []) if p.tipo == "ausencia_movimento"]
+    assert aus == [Intervalo("ausencia_movimento", 0, fim), Intervalo("ausencia_movimento", volta, volta + fim)]
+
+
+def test_interrupcao_da_gravacao_vira_visibilidade_insuficiente():
+    visibilidades = [vis(s) for s in range(0, 31)] + [vis(s) for s in range(500, 531)]
+    intervalos = comportamentos.classificar_comportamentos(parado(0, 30) + parado(500, 530), visibilidades)
+    assert Intervalo("visibilidade_insuficiente", 30, 500) in intervalos
+
+
+def test_quadros_seguidos_nao_sao_interrupcao():
+    visibilidades = [vis(s) for s in range(0, 100)]
+    assert comportamentos.lacunas_gravacao(visibilidades) == []

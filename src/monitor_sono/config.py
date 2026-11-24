@@ -15,6 +15,15 @@ QUADROS_POR_SEGUNDO_ANALISE: int = 1
 RESOLUCAO_ANALISE: tuple[int, int] = (320, 240)
 FALHAS_LEITURA_MAX: int = 30  # RNF08: leituras seguidas com falha antes de encerrar a captura da câmera
 
+# RF02, RNF04 — data e hora gravadas pela câmera na imagem (carimbo)
+REGIAO_CARIMBO: tuple[float, float, float, float] = (0.0, 0.0, 0.32, 0.13)  # x0, y0, x1, y1 em fração do quadro (canto superior esquerdo)
+LIMIAR_BRANCO_CARIMBO: int = 200  # menor valor (0 a 255) nos três canais para um pixel contar como texto branco
+ALTURA_DIGITO_CARIMBO: tuple[float, float] = (0.015, 0.06)  # altura de um dígito, em fração da altura do quadro
+TAMANHO_DIGITO_CARIMBO: tuple[int, int] = (20, 32)  # largura e altura para comparar cada dígito com os modelos
+SEMELHANCA_MINIMA_CARIMBO: float = 0.80  # 0 a 1: abaixo disso o dígito não é reconhecido e o carimbo é descartado
+TOLERANCIA_CARIMBO_S: float = 3.0  # diferença aceita entre o carimbo e o tempo previsto; acima disso exige confirmação
+LACUNA_GRAVACAO_S: float = 10.0  # intervalo sem quadros acima do qual a gravação teve uma interrupção (RN07)
+
 # RF07 — movimento (diferença entre quadros em escala de cinza)
 DESFOQUE_MOVIMENTO: int = 5  # tamanho do desfoque gaussiano (ímpar), reduz o ruído do infravermelho
 LIMIAR_PIXEL: int = 20  # PROVISÓRIO: diferença de intensidade (0 a 255) para um pixel contar como alterado

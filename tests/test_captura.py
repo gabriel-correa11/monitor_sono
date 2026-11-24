@@ -116,3 +116,106 @@ def test_fonte_invalida_gera_erro(tmp_path):
 def test_fps_invalido_gera_erro():
     with pytest.raises(ValueError):
         next(video.capturar_quadros(0, fps_analise=0))
+
+
+# --- RNF04: carimbo de data e hora da câmera --------------------------------------------------------------
+
+from datetime import datetime, timedelta  # noqa: E402
+
+from monitor_sono.captura.carimbo import RelogioCarimbo, ler_carimbo  # noqa: E402
+
+
+def quadro_escuro() -> np.ndarray:
+    """Quadro 1600x900 com textura escura, no tamanho em que o carimbo sintético cabe na região."""
+    return np.random.default_rng(5).integers(20, 90, size=(900, 1600, 3), dtype=np.uint8)
+
+
+def test_le_o_carimbo_da_camera(carimbo):
+    quadro = carimbo(quadro_escuro(), "2026-11-09 03:22:48")
+    assert ler_carimbo(quadro) == datetime(2026, 11, 9, 3, 22, 48)
+
+
+def test_todos_os_digitos_sao_reconhecidos(carimbo):
+    quadro = carimbo(quadro_escuro(), "2026-10-27 13:45:59")
+    assert ler_carimbo(quadro) == datetime(2026, 10, 27, 13, 45, 59)
+
+
+def test_quadro_sem_carimbo_devolve_none():
+    assert ler_carimbo(quadro_escuro()) is None
+
+
+def test_carimbo_incompleto_devolve_none(carimbo):
+    assert ler_carimbo(carimbo(quadro_escuro(), "2026-11-09 03:22")) is None
+
+
+def test_carimbo_com_data_impossivel_devolve_none(carimbo):
+    assert ler_carimbo(carimbo(quadro_escuro(), "2026-13-09 03:22:48")) is None
+
+
+INICIO = datetime(2026, 11, 9, 3, 22, 48)
+
+
+def hora(segundos: float) -> datetime:
+    """Carimbo mostrado pela câmera: o segundo cheio."""
+    return INICIO + timedelta(seconds=int(segundos))
+
+
+def test_sem_carimbo_o_tempo_segue_o_video():
+    relogio = RelogioCarimbo()
+    assert [relogio.atualizar(s, None) for s in (0.0, 1.0, 2.0)] == [0.0, 1.0, 2.0]
+    assert relogio.origem is None
+
+
+def test_carimbo_define_a_origem_da_sessao():
+    relogio = RelogioCarimbo()
+    relogio.atualizar(0.0, hora(0))
+    assert relogio.origem == INICIO
+
+
+def test_video_adiantado_e_corrigido_pelo_carimbo():
+    """O vídeo avança 1 s por quadro, mas o relógio real só 0,95 s: depois de 200 quadros, 190 s."""
+    relogio = RelogioCarimbo()
+    reais = [relogio.atualizar(float(i), hora(0.95 * i)) for i in range(201)]
+    assert None not in reais
+    assert 189.0 <= reais[-1] < 191.0
+    assert reais == sorted(reais)
+
+
+def test_interrupcao_da_gravacao_e_aceita_depois_de_confirmada():
+    relogio = RelogioCarimbo()
+    for s in range(5):
+        relogio.atualizar(float(s), hora(s))
+    assert relogio.atualizar(5.0, hora(905)) is None  # salto ainda em dúvida: quadro ignorado
+    assert relogio.atualizar(6.0, hora(906)) == 906.0  # confirmado pelo quadro seguinte
+    assert relogio.atualizar(7.0, hora(907)) == pytest.approx(907.0, abs=1)
+
+
+def test_digito_mal_lido_isolado_nao_cria_interrupcao():
+    relogio = RelogioCarimbo()
+    for s in range(5):
+        relogio.atualizar(float(s), hora(s))
+    assert relogio.atualizar(5.0, hora(5 + 600)) is None  # um minuto lido errado
+    assert relogio.atualizar(6.0, hora(6)) == pytest.approx(6.0, abs=1)
+
+
+def test_trecho_repetido_pela_camera_nao_e_contado_duas_vezes():
+    relogio = RelogioCarimbo()
+    for s in range(30):
+        relogio.atualizar(float(s), hora(s))
+    # A câmera volta 20 s: esses quadros já foram cobertos e são ignorados.
+    repetidos = [relogio.atualizar(float(30 + i), hora(10 + i)) for i in range(15)]
+    assert repetidos[0] is None
+    seguintes = [relogio.atualizar(float(60 + i), hora(30 + i)) for i in range(10)]
+    aceitos = [r for r in repetidos + seguintes if r is not None]
+    assert aceitos == sorted(aceitos)  # o tempo nunca volta
+    assert min(aceitos) >= 29.0
+    assert seguintes[-1] == pytest.approx(39.0, abs=1)
+
+
+def test_primeiro_carimbo_mal_lido_nao_desloca_a_sessao():
+    relogio = RelogioCarimbo()
+    relogio.atualizar(0.0, hora(0) + timedelta(minutes=10))  # minuto lido errado no primeiro quadro
+    reais = [relogio.atualizar(float(s), hora(s)) for s in range(1, 30)]
+    assert relogio.origem == INICIO
+    assert None not in reais
+    assert reais[-1] == pytest.approx(29.0, abs=1)

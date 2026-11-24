@@ -33,7 +33,8 @@ def identificar_periodos(
     Movimentos próximos (até config.JUNCAO_MOVIMENTO_S) formam um único período. A ausência de movimento é
     o trecho observável sem movimento entre eles; só entra se durar pelo menos config.AUSENCIA_MINIMA_S.
     Trechos sem informação visual (RN07) interrompem a ausência: não se afirma que não houve movimento
-    quando a cena não podia ser observada.
+    quando a cena não podia ser observada. Isso vale também para uma interrupção da gravação (mais de
+    config.LACUNA_GRAVACAO_S sem quadros).
     """
     ruins = sem_informacao(movimentos, visibilidades)
     ordenados = sorted(movimentos, key=lambda m: m.segundo)
@@ -46,16 +47,23 @@ def identificar_periodos(
     ausencias: list[Intervalo] = []
     inicio: float | None = None
     ultimo: float | None = None
+    anterior: float | None = None
+
+    def fechar() -> None:
+        if inicio is not None and ultimo - inicio >= config.AUSENCIA_MINIMA_S:
+            ausencias.append(Intervalo("ausencia_movimento", inicio, ultimo))
+
     for m in ordenados:
-        parado = not m.movimento and m.segundo not in ruins
-        if parado:
+        if anterior is not None and m.segundo - anterior > config.LACUNA_GRAVACAO_S:
+            fechar()  # gravação interrompida: sem informação (RN07)
+            inicio = ultimo = None
+        anterior = m.segundo
+        if not m.movimento and m.segundo not in ruins:
             inicio = m.segundo if inicio is None else inicio
             ultimo = m.segundo
             continue
-        if inicio is not None and ultimo - inicio >= config.AUSENCIA_MINIMA_S:
-            ausencias.append(Intervalo("ausencia_movimento", inicio, ultimo))
+        fechar()
         inicio = ultimo = None
-    if inicio is not None and ultimo - inicio >= config.AUSENCIA_MINIMA_S:
-        ausencias.append(Intervalo("ausencia_movimento", inicio, ultimo))
+    fechar()
 
     return sorted(periodos + ausencias, key=lambda i: i.inicio)

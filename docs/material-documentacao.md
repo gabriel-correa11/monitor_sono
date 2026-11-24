@@ -25,7 +25,8 @@ python -m monitor_sono analisar 0 --autorizado     # câmera ao vivo; Ctrl+C enc
 
 - `--autorizado` confirma que a pessoa monitorada assinou o termo de consentimento (RNF11). Sem ele, o comando
   não roda.
-- `--inicio` é a data e hora real em que a gravação começou. Sem ele, usa o momento da análise.
+- Os horários vêm da data e hora que a câmera grava no canto da imagem (lidas em cada quadro). `--inicio` só é
+  usado quando a câmera não grava data e hora legíveis na imagem. Sem ele, usa o momento da análise.
 - O resultado é gravado no banco local `dados/monitor_sono.db`, que nunca vai para o repositório.
 
 **Abrir o dashboard:**
@@ -34,7 +35,8 @@ python -m monitor_sono analisar 0 --autorizado     # câmera ao vivo; Ctrl+C enc
 streamlit run src/monitor_sono/dashboard/app.py
 ```
 
-**Rodar os testes:** `pytest` (67 testes).
+**Rodar os testes:** `pytest` (97 testes). No Windows, se o pytest falhar no fim com `PermissionError` ao limpar a
+pasta temporária, use `pytest --basetemp .pytest-tmp`.
 
 ## Como o sistema funciona
 
@@ -42,7 +44,12 @@ streamlit run src/monitor_sono/dashboard/app.py
 câmera ou gravação → captura → detecção → classificação → banco → dashboard
 ```
 
-1. **Captura (RF02):** pega 1 quadro por segundo da câmera ou da gravação.
+1. **Captura (RF02):** pega 1 quadro por segundo da câmera ou da gravação. **Horário (RNF04):** lê a data e hora
+   que a câmera grava no canto da imagem (comparando cada dígito com modelos, só com OpenCV). O vídeo da câmera
+   não é um relógio confiável: corre cerca de 2,5% mais rápido, tem trechos sem gravação e trechos gravados duas
+   vezes. Com o carimbo, cada quadro recebe o horário real; um salto para a frente vira interrupção da gravação
+   (marcada como "câmera sem visão") e um trecho repetido é ignorado. Um salto só é aceito se o quadro seguinte o
+   confirmar, para que um dígito mal lido não crie uma interrupção falsa.
 2. **Detecção (RF07, RF15):** compara cada quadro com o anterior e mede quanto da imagem mudou. Acima de 0,5% é
    movimento; acima de 10% é mudança brusca de posição. Imagem escura ou sem contraste é aviso de visibilidade.
    Quando mais da metade da imagem muda de uma vez, é troca de iluminação, não movimento.
@@ -62,32 +69,39 @@ Duas gravações feitas pela câmera da equipe, analisadas localmente. Nenhuma i
 
 | | Gravação 1 | Gravação 2 |
 |---|---|---|
-| Início (horário da câmera) | 09/11/2026 03:22:48 | 10/11/2026 04:23:21 |
-| Duração | 2 h 39 min | 3 h 52 min |
+| Horário (carimbo da câmera) | 09/11/2026 03:22:48 a 07:14:41 | 10/11/2026 04:23:20 a 08:10:34 |
+| Duração | 3 h 52 min | 3 h 47 min |
 | Câmera | 2304x1296, cerca de 5 quadros por segundo | 2304x1296, 5 quadros por segundo |
-| Quadros analisados (1 por segundo) | 9.485 | 13.948 |
-| Períodos de movimento | 291 (42 min no total) | 428 (60 min no total) |
-| Mudanças bruscas de posição | 347 | 394 |
-| Períodos de maior atividade motora (RN04) | 218 (38 min no total) | 323 (55 min no total) |
-| Ausência de movimento (períodos de 1 min ou mais) | 16 períodos, 76 min (48% da sessão) | 29 períodos, 98 min (42% da sessão) |
-| Maior período sem movimento | 20 min | 15 min |
+| Quadros analisados (1 por segundo) | 9.444 | 13.906 |
+| Interrupções da gravação (câmera sem gravar) | 4, somando 78 min (a maior: 03:50:57 a 05:05:08) | 2, somando 30 s |
+| Quadros ignorados (trechos gravados duas vezes ou carimbo em dúvida) | 41 | 42 |
+| Períodos de movimento | 286 (41 min no total) | 417 (59 min no total) |
+| Mudanças bruscas de posição | 345 | 390 |
+| Períodos de maior atividade motora (RN04) | 215 (37 min no total) | 310 (54 min no total) |
+| Ausência de movimento (períodos de 1 min ou mais) | 15 períodos, 73 min (31% da sessão) | 27 períodos, 93 min (41% da sessão) |
+| Maior período sem movimento | 19 min | 14 min |
 | Ausências prolongadas (5 min ou mais, RN03) | 6 | 8 |
-| Quadros com rosto (RF04) | 402 (4,2%): 145 de frente, 257 de perfil | 1.372 (9,8%): 1.322 de frente, 50 de perfil |
-| Rostos aproveitáveis para os olhos (de frente, 120 px ou mais, nítidos) | 41 (0,4%) | 156 (1,1%) |
-| Olhos determinados (RF05) | 7 (0,1%): 7 abertos, 0 fechados | 8 (0,1%): 8 abertos, 0 fechados |
-| Movimentos da cabeça (RF06) | 11 | 11 |
-| Avisos de visibilidade insuficiente (inclui "sem presença") | 0 | 0 |
+| Quadros com rosto (RF04)* | 402 (4,2%): 145 de frente, 257 de perfil | 1.372 (9,8%): 1.322 de frente, 50 de perfil |
+| Rostos aproveitáveis para os olhos (de frente, 120 px ou mais, nítidos)* | 41 (0,4%) | 156 (1,1%) |
+| Olhos abertos registrados (RF05) | 7 trechos | 7 trechos |
+| Movimentos da cabeça (RF06) | 10 | 11 |
+| Avisos de visibilidade insuficiente | 5 (4 interrupções da gravação + 1 trecho) | 3 (2 interrupções + 1 trecho) |
 | Estado estimado | 100% indeterminado | 100% indeterminado |
-| Tempo de processamento | 7,4 min | 10,3 min |
+| Tempo de processamento | 10,8 min | 13,9 min |
 
-Os números de movimento mudaram em relação à análise anterior, que foi feita em partes, em outro ambiente e com
-OpenCV 5; os desta tabela, com OpenCV 4.x, são os oficiais. Segundos com movimento e trocas de iluminação não foram
-medidos nesta análise. O início das sessões foi informado como 03:22 e 04:23, porque o comando aceita hora e minuto.
+\* Contagem da análise de 23/11/2026, antes da leitura do carimbo. A leitura do carimbo muda só os horários e
+ignora cerca de 40 quadros por gravação, então essas proporções praticamente não mudam.
+
+Esta tabela é da análise de 24/11/2026, com os horários lidos do carimbo da câmera em cada quadro. Na análise
+anterior, os horários vinham do relógio do vídeo, que corre cerca de 2,5% mais rápido e não registra as interrupções
+da gravação. Por isso a gravação 1 aparecia com 2 h 39 min em vez de 3 h 52 min, e a ausência de movimento era
+calculada sobre a duração errada.
 
 **Leitura dos resultados:**
 
-- O sistema registrou períodos de movimento em cerca de um quarto do tempo e ausência de movimento em 42% a 48% do
-  tempo, com períodos de até 20 minutos parado.
+- O sistema registrou períodos de movimento em cerca de um quarto do tempo observado e ausência de movimento em 31%
+  a 41% da sessão, com períodos de até 19 minutos parado. Na gravação 1, 78 min (34% da sessão) não foram gravados
+  pela câmera; esse trecho aparece como "câmera sem visão" e não conta como ausência de movimento (RN07).
 - **Conclusão do estudo de caso:** com esta câmera infravermelha a distância, o sistema mede movimento com
   confiança, mas o rosto aparece em menos de 10% do tempo e os olhos são determinados em só 0,1% dos quadros. Por
   isso o estado fica **indeterminado** o tempo todo, como mandam RN06 e RN07: sem evidência dos olhos, a falta de
@@ -130,10 +144,11 @@ Ficam em `src/monitor_sono/config.py`.
 
 ## Limitações
 
-- **A gravação 1 tem um buraco:** a câmera marca 3h51 de noite (03:22:48 a 07:14:21), mas o vídeo tem 2h39. Cerca
-  de 1h15 não foi gravada, provavelmente perto dos 5 minutos de vídeo, onde o sistema detectou uma troca brusca de
-  toda a imagem. Os horários da gravação 1 depois desse ponto ficam adiantados em relação à câmera. Além disso, os
-  dois arquivos marcam o tempo cerca de 2,5% mais devagar que o relógio da câmera.
+- **A câmera grava de forma irregular:** a gravação 1 tem 78 min sem gravação, e as duas têm trechos de alguns
+  segundos gravados duas vezes. O sistema corrige isso lendo o carimbo de data e hora da imagem. Essa leitura
+  depende da posição e da fonte do carimbo desta câmera: os modelos dos dígitos (`captura/digitos_carimbo.npz`)
+  foram tirados dela. Com outra câmera, sem carimbo ou com carimbo diferente, o sistema volta a usar `--inicio` e o
+  relógio do vídeo, e as interrupções não são detectadas.
 - **Rosto e olhos quase não são observados com esta câmera:** o rosto aparece em menos de 10% do tempo e os olhos
   em 0,1% dos quadros (pessoa de lado ou coberta, olho com 25 a 30 px, cascata não treinada para infravermelho).
   Sem olhos, o estado fica sempre indeterminado (RN06, RN07). O sistema mede movimento com confiança, mas não estima

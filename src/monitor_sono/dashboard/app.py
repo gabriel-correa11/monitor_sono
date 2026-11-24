@@ -72,8 +72,14 @@ def _minutos(tipo: str) -> float:
 
 # --- RF14: relatório ---------------------------------------------------------------------------------
 st.header("Resumo da sessão")
+if not sessao["fim"]:
+    st.info(
+        "Esta sessão não tem horário de encerramento: a análise foi interrompida antes de gravar os "
+        "resultados. Ela pode ser excluída no fim da página."
+    )
+horas, minutos = divmod(round(duracao_min), 60)
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Duração", f"{duracao_min / 60:.0f} h {duracao_min % 60:.0f} min")
+c1.metric("Duração", f"{horas} h {minutos} min")
 c2.metric("Períodos de movimento", _contar("movimento_corporal"))
 c3.metric("Mudanças de posição", _contar("mudanca_posicao"))
 c4.metric("Tempo sem movimento", f"{_minutos('ausencia_movimento'):.0f} min")
@@ -124,8 +130,10 @@ if not est.empty:
     )
     if (est["estado"] == "indeterminado").all():
         st.info(
-            "Todo o tempo ficou **indeterminado**. Nesta versão o sistema ainda não detecta os olhos (RF05), "
-            "e pelas regras RN02, RN03 e RN06 a falta de movimento sozinha não basta para estimar sono."
+            "Todo o tempo ficou **indeterminado**: nenhum trecho teve olhos abertos por período contínuo "
+            "(RN01) nem olhos fechados junto com ausência prolongada de movimento (RN02, RN03). Quando os "
+            "olhos não aparecem com clareza, o estado fica indeterminado (RN06), e a falta de movimento "
+            "sozinha não basta para estimar sono."
         )
 
 # --- RF15: avisos de visibilidade ---------------------------------------------------------------------
@@ -144,13 +152,14 @@ else:
 
 # --- RF14: relatório para baixar ----------------------------------------------------------------------
 st.header("Relatório")
-relatorio = pd.concat(
-    [
-        comp.assign(categoria="Observado")[["categoria", "nome", "inicio", "fim"]] if not comp.empty else None,
-        est.assign(categoria="Estimado")[["categoria", "nome", "inicio", "fim"]] if not est.empty else None,
-    ],
-    ignore_index=True,
-)
+colunas = ["categoria", "nome", "inicio", "fim"]
+partes = [
+    df.assign(categoria=categoria)[colunas]
+    for df, categoria in ((comp, "Observado"), (est, "Estimado"))
+    if not df.empty
+]
+# Sessão sem nenhum registro (ex.: interrompida no início) gera um relatório só com o cabeçalho.
+relatorio = pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=colunas)
 relatorio.columns = ["Categoria", "Comportamento ou estado", "Início", "Fim"]
 st.download_button(
     "Baixar relatório (CSV)",

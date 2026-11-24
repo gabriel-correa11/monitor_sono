@@ -11,10 +11,14 @@ dependencies = [
     "numpy>=1.26",
     "streamlit>=1.35",
     "pandas>=2.2",
+    "altair>=5",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+monitor_sono = ["captura/*.npz"]  # modelos dos dígitos do carimbo da câmera (RNF04)
 
 # IMPORTANTE: instale sempre com "pip install -e ." (modo editável).
 # O config.py calcula dados/ a partir do local do arquivo em src/;

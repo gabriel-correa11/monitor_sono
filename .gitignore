@@ -63,3 +63,6 @@ dist/
 # Variáveis de ambiente e segredos
 .env
 .streamlit/secrets.toml
+
+# pasta temporária do pytest no Windows (pytest --basetemp .pytest-tmp)
+.pytest-tmp/
