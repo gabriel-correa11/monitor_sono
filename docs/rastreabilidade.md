@@ -47,8 +47,8 @@ Caminhos relativos a `src/monitor_sono/`.
 | RF10 | Estimar estados de sono a partir de características visuais | `classificacao/estados.py` | `estimar_estados()` | Parcial | `test_classificacao.py`, `test_pipeline.py` |
 | RF11 | Identificar períodos de movimentação e ausência | `classificacao/periodos.py` | `identificar_periodos()` | Implementado | `test_classificacao.py` |
 | RF12 | Armazenar resultados das classificações | `registro/banco.py`, `pipeline.py` | `registrar_estado()`, tabela `estados` | Implementado | `test_registro.py`, `test_pipeline.py` |
-| RF13 | Apresentar histórico cronológico de comportamentos e estados | `dashboard/app.py` | seção "Linha do tempo" (Observado e Estimado) | Implementado | Verificação manual do dashboard |
-| RF14 | Gerar relatório da sessão | `dashboard/app.py` | "Resumo da sessão", "Relatório" (CSV) | Implementado | Verificação manual do dashboard |
+| RF13 | Apresentar histórico cronológico de comportamentos e estados | `dashboard/app.py` | seção "Linha do tempo" (Observado e Estimado) | Implementado | `test_dashboard.py` |
+| RF14 | Gerar relatório da sessão | `dashboard/app.py` | "Resumo da sessão", "Relatório" (CSV) | Implementado | `test_dashboard.py` |
 | RF15 | Sinalizar visibilidade insuficiente da câmera | `deteccao/visibilidade.py`, `dashboard/app.py` | `avaliar_visibilidade()`, `considerar_presenca()`, seção "Avisos" | Implementado | `test_deteccao.py`, `test_classificacao.py` |
 
 ### Observações
@@ -154,3 +154,4 @@ Caminhos relativos a `src/monitor_sono/`.
 | 23/11/2026 | 2.1 | RF02 implementado: `capturar_quadros()` com OpenCV, entrega quadros a `fps_analise` e redimensiona para `RESOLUCAO_ANALISE`. Testes com vídeo sintético. | Pedro Motta |
 | 23/11/2026 | 3.0 | Sistema de ponta a ponta: correção do RF02 (perda de quadros e tolerância a falhas), detecção de movimento e visibilidade, classificação com as regras RN01 a RN07, pipeline com o comando `analisar`, dashboard e análise das duas gravações do estudo de caso. RF03 a RF06 aguardam decisão sobre o detector de rosto. | Gabriel Correa |
 | 23/11/2026 | 3.1 | RF03 a RF06 implementados com as cascatas Haar do OpenCV 4.x (dependência limitada a `<5`): presença, rosto, estado dos olhos com regra conservadora (RN06) e movimento da cabeça, ligados no pipeline. RF09 e RF15 passam a Implementado. RF10 continua Parcial: nas gravações do estudo de caso, os olhos são determinados em 0,1% dos quadros. | Gabriel Correa |
+| 24/11/2026 | 3.2 | Correções: o dashboard não quebra mais com sessão sem registros nem com sessão sem encerramento (RF14), e a duração do resumo deixou de arredondar as horas para cima. Uma análise que falha ao abrir a fonte não deixa mais sessão vazia no banco (RF01). A linha de comando mostra uma mensagem curta para fonte inválida e para `--inicio` fora do formato. RF13 e RF14 passam a ter teste automatizado (`test_dashboard.py`). | Gabriel Correa |

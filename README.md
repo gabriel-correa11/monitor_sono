@@ -61,7 +61,7 @@ grava no banco e mostra no dashboard.
 | Classificação (comportamentos, períodos e estados) | Funcionando e testado |
 | Pipeline e linha de comando (`analisar`) | Funcionando e testado |
 | Banco de dados (sessões, comportamentos e estados) | Funcionando e testado |
-| Dashboard (linha do tempo, relatório em CSV, avisos, exclusão) | Funcionando (verificação manual) |
+| Dashboard (linha do tempo, relatório em CSV, avisos, exclusão) | Funcionando e testado |
 
 Os limiares e tempos de `config.py` são **provisórios**: ainda precisam ser confirmados com um gabarito das
 gravações. Os resultados do estudo de caso e as limitações estão em
@@ -86,7 +86,8 @@ monitor_sono/
 │   ├── test_captura.py          Testes da captura (RF02, RNF08)
 │   ├── test_deteccao.py         Testes da detecção (RF03 a RF07, RF15)
 │   ├── test_classificacao.py    Testes da classificação (RF09 a RF11, RN01 a RN07)
-│   ├── test_pipeline.py         Teste de ponta a ponta com vídeo sintético
+│   ├── test_dashboard.py        Testes do dashboard (RF13, RF14, RNF10, RNF12)
+│   ├── test_pipeline.py         Teste de ponta a ponta com vídeo sintético e linha de comando
 │   └── test_registro.py         Testes do banco (RF01, RF08, RF12, RNF05, RNF10)
 └── src/
     └── monitor_sono/
@@ -137,6 +138,7 @@ Cada pasta corresponde a uma etapa do fluxo. Isso permite que os analistas traba
 | SQLite | Banco local em um único arquivo, sem servidor | Domínio público |
 | Streamlit | Dashboard | Apache 2.0 |
 | pandas | Organização dos dados para o dashboard | BSD |
+| Altair | Gráficos da linha do tempo no dashboard | BSD |
 | pytest | Testes | MIT |
 
 Todas as licenças são permissivas. O levantamento técnico alerta que Ultralytics (YOLO) e Grafana são

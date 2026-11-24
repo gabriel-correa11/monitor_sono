@@ -1,8 +1,12 @@
 """Teste de ponta a ponta do pipeline com vídeo sintético (sem gravação real)."""
 
+import sys
+
 import cv2
 import numpy as np
+import pytest
 
+from monitor_sono import __main__ as linha_de_comando
 from monitor_sono import config, pipeline
 from monitor_sono.deteccao import olhos
 from monitor_sono.registro import banco
@@ -87,3 +91,50 @@ def test_olhos_chegam_ate_os_estados_no_banco(tmp_path, monkeypatch):
     estados = {(e["estado"], e["confiavel"]) for e in banco.estados_da_sessao(r.sessao_id, caminho=db)}
     assert ("vigilia", 1) in estados  # RN01
     assert ("possivel_sono", 1) in estados  # RN02 + RN03: olhos fechados e ausência prolongada juntos
+
+
+def test_fonte_invalida_nao_deixa_sessao_no_banco(tmp_path):
+    """RF01: uma análise que falha ao abrir a fonte não deixa sessão vazia e sem fim."""
+    db = tmp_path / "teste.db"
+
+    with pytest.raises(RuntimeError):
+        pipeline.analisar(str(tmp_path / "nao_existe.avi"), caminho_banco=db)
+
+    assert banco.listar_sessoes(caminho=db) == []
+
+
+def test_linha_de_comando_fonte_invalida_mostra_mensagem(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "CAMINHO_BANCO", tmp_path / "teste.db")
+    monkeypatch.setattr(sys, "argv", ["monitor_sono", "analisar", str(tmp_path / "nao_existe.avi"), "--autorizado"])
+
+    with pytest.raises(SystemExit) as saida:
+        linha_de_comando.main()
+
+    assert "RF02" in str(saida.value.code)
+    assert banco.listar_sessoes() == []
+
+
+def test_linha_de_comando_inicio_invalido_mostra_formato(monkeypatch, capsys):
+    monkeypatch.setattr(
+        sys, "argv", ["monitor_sono", "analisar", "x.mp4", "--inicio", "20/11/2026 22:30", "--autorizado"]
+    )
+
+    with pytest.raises(SystemExit) as saida:
+        linha_de_comando.main()
+
+    assert saida.value.code == 2  # erro de argumento do argparse, sem traceback
+    assert "AAAA-MM-DD HH:MM" in capsys.readouterr().err
+
+
+def test_linha_de_comando_aceita_inicio_valido(tmp_path, monkeypatch):
+    """RNF04: os horários gravados partem do --inicio informado."""
+    monkeypatch.setattr(config, "CAMINHO_BANCO", tmp_path / "teste.db")
+    video = tmp_path / "sintetico.avi"
+    gerar_video(video, segundos=5)
+    monkeypatch.setattr(sys, "argv", ["monitor_sono", "analisar", str(video), "--inicio", "2026-11-20 22:30", "--autorizado"])
+
+    linha_de_comando.main()
+
+    sessao = banco.listar_sessoes()[0]
+    assert sessao["inicio"] == "2026-11-20T22:30:00"
+    assert sessao["fim"] is not None

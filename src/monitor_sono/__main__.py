@@ -13,6 +13,16 @@ def _progresso(segundo: float) -> None:
         print(f"\r  {segundo / 60:.0f} min analisados...", end="", file=sys.stderr, flush=True)
 
 
+def _data_hora(texto: str) -> datetime:
+    """RNF04. Lê a data e hora real do início da gravação no formato "AAAA-MM-DD HH:MM"."""
+    try:
+        return datetime.strptime(texto, "%Y-%m-%d %H:%M")
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f'data e hora inválida: "{texto}". Use o formato "AAAA-MM-DD HH:MM", ex.: "2026-11-20 22:30"'
+        ) from None
+
+
 def _analisar(args: argparse.Namespace) -> None:
     from monitor_sono import pipeline  # importa o OpenCV só quando for analisar
 
@@ -23,11 +33,13 @@ def _analisar(args: argparse.Namespace) -> None:
             "repetindo o comando com --autorizado."
         )
     fonte = int(args.fonte) if args.fonte.isdigit() else args.fonte
-    inicio = datetime.strptime(args.inicio, "%Y-%m-%d %H:%M") if args.inicio else None
 
     print(config.AVISO_NAO_DIAGNOSTICO)
     print("Analisando... (com câmera, Ctrl+C encerra a sessão)")
-    r = pipeline.analisar(fonte, inicio=inicio, ao_progredir=_progresso)
+    try:
+        r = pipeline.analisar(fonte, inicio=args.inicio, ao_progredir=_progresso)
+    except RuntimeError as erro:  # RF02: fonte que não abre; nenhuma sessão fica gravada
+        sys.exit(f"{erro}. Confira o índice da câmera ou o caminho da gravação.")
 
     tipos = Counter(c.tipo for c in r.comportamentos)
     tempo_estado = Counter()
@@ -49,7 +61,7 @@ def main() -> None:
 
     p = sub.add_parser("analisar", help="analisa uma câmera ou gravação e grava a sessão no banco")
     p.add_argument("fonte", help="índice da câmera (ex.: 0) ou caminho da gravação")
-    p.add_argument("--inicio", help='data e hora real do início da gravação, ex.: "2026-11-20 22:30"')
+    p.add_argument("--inicio", type=_data_hora, help='data e hora real do início da gravação, ex.: "2026-11-20 22:30"')
     p.add_argument("--autorizado", action="store_true",
                    help="confirma que a pessoa monitorada autorizou o tratamento das imagens (RNF11)")
     p.set_defaults(funcao=_analisar)

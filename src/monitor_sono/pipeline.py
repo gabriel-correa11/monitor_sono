@@ -53,6 +53,7 @@ def analisar(
     - inicio: data e hora real do início da gravação. Os eventos são gravados como inicio + segundo do
       quadro (RNF04). Sem valor, usa o momento atual.
     - Com câmera, a análise termina com Ctrl+C; o que foi capturado até ali é classificado e gravado.
+    - Se a captura falhar (ex.: fonte que não abre), a sessão criada é excluída e o erro é repassado.
     """
     inicio = (inicio or datetime.now()).replace(microsecond=0)
     sessao_id = banco.criar_sessao(inicio, caminho_banco)
@@ -92,6 +93,11 @@ def analisar(
                 ao_progredir(segundo)
     except KeyboardInterrupt:
         pass
+    except Exception:
+        # RF01: a análise falhou antes de gravar qualquer resultado (ex.: fonte que não abre). A sessão
+        # vazia é desfeita para não ficar no banco sem horário de encerramento.
+        banco.excluir_sessao(sessao_id, caminho_banco)
+        raise
 
     comportamentos = classificar_comportamentos(movimentos, visibilidades, olhos)
     comportamentos += juntar_segundos(segundos_cabeca, "movimento_cabeca", config.JUNCAO_MOVIMENTO_S)  # RF06
