@@ -8,8 +8,7 @@ Projeto da disciplina **Tópicos Especiais em Engenharia de Software**.
 > diagnóstico médico, não faz interpretação clínica e não identifica fases do sono. Os resultados não
 > substituem a polissonografia nem qualquer exame (RNF12).
 
-> Projeto em construção. O escopo foi definido como estudo de caso. A lista de requisitos vigente está
-> em [`docs/requisitos.md`](docs/requisitos.md).
+> Escopo: estudo de caso. A lista de requisitos vigente está em [`docs/requisitos.md`](docs/requisitos.md).
 
 ---
 

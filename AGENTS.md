@@ -182,7 +182,7 @@ responsabilidade cada, que conversam só por funções públicas.
 
 ## 7. Fluxo no git (para as pessoas da equipe)
 
-- A `main` é protegida: só recebe código por pull request aprovado por **outro analista**.
+- A `main` só recebe código por pull request revisado por **outro analista**.
 - Uma branch por tarefa: `rfxx-descricao-curta`. Commits começam pelo requisito: `RFxx: o que mudou`.
 - Antes de cada commit, rode `git status` e confira que não aparece mídia, banco, `dados/`, `.venv`,
   `.idea` ou `.claude/settings.local.json`.
