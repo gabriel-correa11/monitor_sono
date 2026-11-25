@@ -48,7 +48,7 @@ Caminhos relativos a `src/monitor_sono/`.
 | RF11 | Identificar períodos de movimentação e ausência | `classificacao/periodos.py` | `identificar_periodos()` | Implementado | `test_classificacao.py` |
 | RF12 | Armazenar resultados das classificações | `registro/banco.py`, `pipeline.py` | `registrar_estado()`, tabela `estados` | Implementado | `test_registro.py`, `test_pipeline.py` |
 | RF13 | Apresentar histórico cronológico de comportamentos e estados | `dashboard/app.py` | seção "Linha do tempo" (Observado e Estimado) | Implementado | `test_dashboard.py` |
-| RF14 | Gerar relatório da sessão | `dashboard/app.py` | "Resumo da sessão", "Relatório" (CSV) | Implementado | `test_dashboard.py` |
+| RF14 | Gerar relatório da sessão | `dashboard/app.py` | "Resumo da sessão", "Relatório" (CSV com resumo da sessão antes da lista de eventos) | Implementado | `test_dashboard.py` |
 | RF15 | Sinalizar visibilidade insuficiente da câmera | `deteccao/visibilidade.py`, `dashboard/app.py` | `avaliar_visibilidade()`, `considerar_presenca()`, seção "Avisos" | Implementado | `test_deteccao.py`, `test_classificacao.py` |
 
 ### Observações
@@ -95,7 +95,7 @@ Caminhos relativos a `src/monitor_sono/`.
 | RNF06 | Proteção contra acessos não autorizados | Banco local em `dados/`, fora do git; nada vai para a nuvem | Estrutura pronta | Controle de acesso e criptografia |
 | RNF07 | Distinguir observações visuais de estados estimados | Tabelas `comportamentos` e `estados`; dashboard com faixas "Observado" e "Estimado" | Implementado | — |
 | RNF08 | Monitoramento contínuo durante a sessão | Tolerância a falhas de leitura (`config.FALHAS_LEITURA_MAX`); 1 quadro analisado por segundo | Implementado | Medir com câmera ao vivo por uma noite inteira |
-| RNF09 | Registrar classificações não confiáveis | Coluna `confiavel` na tabela `estados`; "indeterminado" é sempre não confiável | Implementado | — |
+| RNF09 | Registrar classificações não confiáveis | Coluna `confiavel` na tabela `estados`; "indeterminado" é sempre não confiável; coluna "Confiável" no CSV e tempo não confiável em "Estados estimados" (`dashboard/app.py`) | Implementado | `test_dashboard.py` |
 | RNF10 | Permitir exclusão de dados da sessão | `excluir_sessao()` com CASCADE; botão no dashboard com confirmação | Implementado | — |
 | RNF11 | Autorização LGPD para tratamento de imagens | `analisar` só roda com `--autorizado`, que confirma o termo assinado | Parcial | Termo de consentimento em si |
 | RNF12 | Informar que resultados não são diagnóstico | `config.AVISO_NAO_DIAGNOSTICO` no dashboard, na linha de comando e no relatório CSV | Implementado | — |
@@ -156,3 +156,4 @@ Caminhos relativos a `src/monitor_sono/`.
 | 23/11/2026 | 3.1 | RF03 a RF06 implementados com as cascatas Haar do OpenCV 4.x (dependência limitada a `<5`): presença, rosto, estado dos olhos com regra conservadora (RN06) e movimento da cabeça, ligados no pipeline. RF09 e RF15 passam a Implementado. RF10 continua Parcial: nas gravações do estudo de caso, os olhos são determinados em 0,1% dos quadros. | Gabriel Correa |
 | 24/11/2026 | 3.2 | Correções: o dashboard não quebra mais com sessão sem registros nem com sessão sem encerramento (RF14), e a duração do resumo deixou de arredondar as horas para cima. Uma análise que falha ao abrir a fonte não deixa mais sessão vazia no banco (RF01). A linha de comando mostra uma mensagem curta para fonte inválida e para `--inicio` fora do formato. RF13 e RF14 passam a ter teste automatizado (`test_dashboard.py`). | Gabriel Correa |
 | 24/11/2026 | 3.3 | RNF04: o horário de cada quadro passa a vir do carimbo de data e hora que a câmera grava na imagem (`captura/carimbo.py`). Corrige o relógio do vídeo (cerca de 2,5% adiantado) e as interrupções da gravação 1. Interrupções da gravação viram visibilidade insuficiente (RF15) e interrompem a ausência de movimento (RN07, `classificacao/`); trechos gravados duas vezes são ignorados. `--inicio` vira reserva para câmeras sem carimbo. | Gabriel Correa |
+| 25/11/2026 | 3.4 | RF14: o CSV do relatório começa com um resumo (sessão, início, fim, duração, movimentos, mudanças de posição, movimentos da cabeça, tempo sem movimento e tempo em cada estado estimado), depois da linha do aviso (RNF12). RNF09: coluna "Confiável" nos estados estimados do CSV e tempo não confiável na seção "Estados estimados". | Gabriel Correa |

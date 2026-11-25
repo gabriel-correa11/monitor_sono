@@ -57,7 +57,7 @@ Ela muda ao longo do projeto:
   Se a tarefa exigir isso, pare e pergunte.
 - Criar função, classe, tabela, tipo de evento, tela ou dependência sem requisito vigente.
 - Instalar ou adicionar biblioteca sem acordo da equipe.
-- Decidir pendências listadas no `README.md`. Avise em vez de escolher.
+- Decidir as pendências listadas em "Decisões pendentes" do `docs/rastreabilidade.md`. Avise em vez de escolher.
 - Alterar ou apagar registros antigos de `agents-context/`.
 - Criar `CLAUDE.md` ou `CLAUDE.local.md` no projeto. Se um deles existir, o Claude Code deixa de ler este AGENTS.md.
 
@@ -182,7 +182,7 @@ responsabilidade cada, que conversam só por funções públicas.
 
 ## 7. Fluxo no git (para as pessoas da equipe)
 
-- A `main` é protegida: só recebe código por pull request aprovado por **outro analista**.
+- A `main` só recebe código por pull request revisado por **outro analista**.
 - Uma branch por tarefa: `rfxx-descricao-curta`. Commits começam pelo requisito: `RFxx: o que mudou`.
 - Antes de cada commit, rode `git status` e confira que não aparece mídia, banco, `dados/`, `.venv`,
   `.idea` ou `.claude/settings.local.json`.

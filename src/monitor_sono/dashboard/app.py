@@ -1,4 +1,4 @@
-"""RF13, RF14, RF15, RNF07, RNF10, RNF12 — Dashboard Streamlit.
+"""RF13, RF14, RF15, RNF07, RNF09, RNF10, RNF12 — Dashboard Streamlit.
 
 Rodar com: streamlit run src/monitor_sono/dashboard/app.py
 Lê os dados só pelo módulo registro; não abre o banco diretamente nem roda a câmera.
@@ -70,6 +70,10 @@ def _minutos(tipo: str) -> float:
     return float(comp.loc[comp["tipo"] == tipo, "duracao_min"].sum()) if not comp.empty else 0.0
 
 
+# Tempo em cada estado estimado, usado na tela e no relatório (RF14).
+tempo_estados = est.groupby("nome")["duracao_min"].sum() if not est.empty else pd.Series(dtype=float)
+total_estados = tempo_estados.sum() or 1
+
 # --- RF14: relatório ---------------------------------------------------------------------------------
 st.header("Resumo da sessão")
 if not sessao["fim"]:
@@ -78,8 +82,9 @@ if not sessao["fim"]:
         "resultados. Ela pode ser excluída no fim da página."
     )
 horas, minutos = divmod(round(duracao_min), 60)
+duracao_texto = f"{horas} h {minutos} min"
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Duração", f"{horas} h {minutos} min")
+c1.metric("Duração", duracao_texto)
 c2.metric("Períodos de movimento", _contar("movimento_corporal"))
 c3.metric("Mudanças de posição", _contar("mudanca_posicao"))
 c4.metric("Tempo sem movimento", f"{_minutos('ausencia_movimento'):.0f} min")
@@ -122,11 +127,17 @@ if not est.empty:
 # --- Estados estimados ------------------------------------------------------------------------------
 st.header("Estados estimados")
 if not est.empty:
-    tempo = est.groupby("nome")["duracao_min"].sum()
-    total = tempo.sum() or 1
     st.dataframe(
-        pd.DataFrame({"Minutos": tempo.round(0), "% do tempo": (100 * tempo / total).round(0)}).rename_axis("Estado"),
+        pd.DataFrame(
+            {"Minutos": tempo_estados.round(0), "% do tempo": (100 * tempo_estados / total_estados).round(0)}
+        ).rename_axis("Estado"),
         width="stretch",
+    )
+    # RNF09: quanto do tempo estimado não teve classificação confiável.
+    nao_confiavel = float(est.loc[est["confiavel"] == 0, "duracao_min"].sum())
+    st.metric("Tempo não confiável", f"{nao_confiavel:.0f} min ({100 * nao_confiavel / total_estados:.0f}%)")
+    st.caption(
+        "**Não confiável** quer dizer que faltou informação visual para estimar o estado com segurança (RN07)."
     )
     if (est["estado"] == "indeterminado").all():
         st.info(
@@ -150,20 +161,44 @@ else:
         hide_index=True,
     )
 
-# --- RF14: relatório para baixar ----------------------------------------------------------------------
+# --- RF14 e RNF09: relatório para baixar --------------------------------------------------------------
 st.header("Relatório")
-colunas = ["categoria", "nome", "inicio", "fim"]
-partes = [
-    df.assign(categoria=categoria)[colunas]
-    for df, categoria in ((comp, "Observado"), (est, "Estimado"))
-    if not df.empty
+# RF14: resumo da sessão antes da lista de eventos.
+resumo = [
+    ("Sessão", sessao_id),
+    ("Início", inicio.isoformat(sep=" ")),
+    ("Fim", fim.isoformat(sep=" ") if sessao["fim"] else "sem encerramento"),
+    ("Duração", duracao_texto),
+    ("Períodos de movimento", _contar("movimento_corporal")),
+    ("Mudanças de posição", _contar("mudanca_posicao")),
+    ("Movimentos da cabeça", _contar("movimento_cabeca")),
+    ("Tempo sem movimento (min)", round(_minutos("ausencia_movimento"))),
 ]
-# Sessão sem nenhum registro (ex.: interrompida no início) gera um relatório só com o cabeçalho.
+for nome_estado, minutos_estado in tempo_estados.items():
+    resumo += [
+        (f"{nome_estado} (min)", round(minutos_estado)),
+        (f"{nome_estado} (%)", round(100 * minutos_estado / total_estados)),
+    ]
+
+# RNF09: "Confiável" só vale para os estados estimados; fica vazio nos comportamentos observados.
+colunas = ["categoria", "nome", "inicio", "fim", "confiavel"]
+partes = []
+if not comp.empty:
+    partes.append(comp.assign(categoria="Observado", confiavel="")[colunas])
+if not est.empty:
+    partes.append(est.assign(categoria="Estimado", confiavel=est["confiavel"].map({1: "Sim", 0: "Não"}))[colunas])
+# Sessão sem nenhum registro (ex.: interrompida no início) gera uma lista de eventos só com o cabeçalho.
 relatorio = pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=colunas)
-relatorio.columns = ["Categoria", "Comportamento ou estado", "Início", "Fim"]
+relatorio.columns = ["Categoria", "Comportamento ou estado", "Início", "Fim", "Confiável"]
+csv_relatorio = (
+    "# " + config.AVISO_NAO_DIAGNOSTICO + "\n"  # RNF12: aviso na primeira linha
+    + pd.DataFrame(resumo, columns=["Resumo", "Valor"]).to_csv(index=False, lineterminator="\n")
+    + "\n"
+    + relatorio.to_csv(index=False, lineterminator="\n")
+)
 st.download_button(
     "Baixar relatório (CSV)",
-    data=("# " + config.AVISO_NAO_DIAGNOSTICO + "\n" + relatorio.to_csv(index=False)).encode("utf-8-sig"),
+    data=csv_relatorio.encode("utf-8-sig"),
     file_name=f"relatorio_sessao_{sessao_id}.csv",
     mime="text/csv",
 )

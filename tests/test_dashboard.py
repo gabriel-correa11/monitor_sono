@@ -1,9 +1,11 @@
-"""Testes do dashboard (RF13, RF14, RNF10, RNF12) com o executor de testes do Streamlit e banco temporário."""
+"""Testes do dashboard (RF13, RF14, RNF09, RNF10, RNF12) com o executor de testes do Streamlit e banco temporário."""
 
+import csv
 from datetime import datetime
 from pathlib import Path
 
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from monitor_sono import config
@@ -64,6 +66,56 @@ def test_duracao_em_horas_e_minutos(db, fim, esperado):
     banco.finalizar_sessao(sid, fim)
 
     assert metrica(abrir(sid), "Duração") == esperado
+
+
+def test_relatorio_csv_tem_resumo_e_coluna_confiavel(db, monkeypatch):
+    """RF14, RNF09, RNF12: aviso na 1ª linha, resumo antes dos eventos e coluna "Confiável"."""
+    baixado = {}
+    original = st.download_button
+
+    def capturar(rotulo, data, *args, **kwargs):
+        baixado["csv"] = data.decode("utf-8-sig")
+        return original(rotulo, data, *args, **kwargs)
+
+    monkeypatch.setattr(st, "download_button", capturar)
+
+    sid = banco.criar_sessao(datetime(2026, 11, 20, 22, 30))
+    banco.registrar_comportamento(sid, "movimento_corporal", datetime(2026, 11, 20, 22, 40), datetime(2026, 11, 20, 22, 41))
+    banco.registrar_comportamento(sid, "mudanca_posicao", datetime(2026, 11, 20, 22, 41))
+    banco.registrar_comportamento(sid, "movimento_cabeca", datetime(2026, 11, 20, 22, 50), datetime(2026, 11, 20, 22, 51))
+    banco.registrar_comportamento(sid, "ausencia_movimento", datetime(2026, 11, 20, 23, 0), datetime(2026, 11, 20, 23, 30))
+    banco.registrar_estado(sid, "vigilia", datetime(2026, 11, 20, 22, 30), datetime(2026, 11, 20, 23, 0), True)
+    banco.registrar_estado(sid, "indeterminado", datetime(2026, 11, 20, 23, 0), datetime(2026, 11, 21, 0, 10), False)
+    banco.finalizar_sessao(sid, datetime(2026, 11, 21, 0, 10))
+
+    at = abrir(sid)
+
+    linhas = baixado["csv"].split("\n")
+    assert linhas[0] == "# " + config.AVISO_NAO_DIAGNOSTICO  # RNF12
+    separador = linhas.index("")
+    resumo = dict(list(csv.reader(linhas[1:separador]))[1:])
+    assert resumo["Sessão"] == str(sid)
+    assert resumo["Início"] == "2026-11-20 22:30:00"
+    assert resumo["Fim"] == "2026-11-21 00:10:00"
+    assert resumo["Duração"] == "1 h 40 min"
+    assert resumo["Períodos de movimento"] == "1"
+    assert resumo["Mudanças de posição"] == "1"
+    assert resumo["Movimentos da cabeça"] == "1"
+    assert resumo["Tempo sem movimento (min)"] == "30"
+    assert resumo["Acordado (estimado) (min)"] == "30"
+    assert resumo["Acordado (estimado) (%)"] == "30"
+    assert resumo["Indeterminado (min)"] == "70"
+    assert resumo["Indeterminado (%)"] == "70"
+
+    eventos = list(csv.DictReader([l for l in linhas[separador + 1:] if l]))
+    assert {e["Comportamento ou estado"]: e["Confiável"] for e in eventos if e["Categoria"] == "Estimado"} == {
+        "Acordado (estimado)": "Sim",
+        "Indeterminado": "Não",
+    }
+    assert all(e["Confiável"] == "" for e in eventos if e["Categoria"] == "Observado")
+    assert len(eventos) == 6
+
+    assert metrica(at, "Tempo não confiável") == "70 min (70%)"  # RNF09 na tela
 
 
 def test_sessao_sem_registros_nao_quebra(db):
