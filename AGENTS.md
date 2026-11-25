@@ -57,7 +57,7 @@ Ela muda ao longo do projeto:
   Se a tarefa exigir isso, pare e pergunte.
 - Criar função, classe, tabela, tipo de evento, tela ou dependência sem requisito vigente.
 - Instalar ou adicionar biblioteca sem acordo da equipe.
-- Decidir pendências listadas no `README.md`. Avise em vez de escolher.
+- Decidir as pendências listadas em "Decisões pendentes" do `docs/rastreabilidade.md`. Avise em vez de escolher.
 - Alterar ou apagar registros antigos de `agents-context/`.
 - Criar `CLAUDE.md` ou `CLAUDE.local.md` no projeto. Se um deles existir, o Claude Code deixa de ler este AGENTS.md.
 
